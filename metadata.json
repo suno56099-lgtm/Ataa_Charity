@@ -1,0 +1,6 @@
+{
+  "name": "جمعية عطاء - منصة إدارة المستفيدين والتوزيع",
+  "description": "منصة رقمية لإدارة المستفيدين، نقاط السلع التموينية، الأكواد الشهرية الذكية وعمليات الصرف والتسليم لجمعية عطاء الخيرية.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

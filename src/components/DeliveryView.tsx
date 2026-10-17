@@ -1,0 +1,619 @@
+import React, { useState } from 'react';
+import {
+  ShoppingBag,
+  KeyRound,
+  CheckCircle2,
+  AlertTriangle,
+  Coins,
+  Plus,
+  Minus,
+  ArrowRight,
+  Printer,
+  ShieldCheck,
+  RotateCcw,
+} from 'lucide-react';
+import { Product, Beneficiary, MonthlyCode, DeliveryRecord, StaffAccount } from '../types/index.ts';
+import { dataService } from '../services/dataService.ts';
+import { CartItem } from '../utils/deliveryRules.ts';
+import { maskNationalId } from '../utils/egyptianValidation.ts';
+
+interface DeliveryViewProps {
+  products: Product[];
+  currentUser: StaffAccount | null;
+  onRefresh: () => void;
+}
+
+export const DeliveryView: React.FC<DeliveryViewProps> = ({
+  products,
+  currentUser,
+  onRefresh,
+}) => {
+  const currentMonth = '2026-10'; // October 2026
+
+  // Flow State: 'verify_code' | 'pick_items' | 'success_receipt'
+  const [step, setStep] = useState<'verify_code' | 'pick_items' | 'success_receipt'>('verify_code');
+
+  const [inputCode, setInputCode] = useState('');
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+
+  // Verified Data
+  const [verifiedBeneficiary, setVerifiedBeneficiary] = useState<Beneficiary | null>(null);
+  const [verifiedCodeRecord, setVerifiedCodeRecord] = useState<MonthlyCode | null>(null);
+
+  // Cart
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [deliveryNotes, setDeliveryNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Completed Delivery
+  const [completedDelivery, setCompletedDelivery] = useState<DeliveryRecord | null>(null);
+
+  // Handle Verify Code
+  const handleVerify = (codeToVerify?: string) => {
+    const code = (codeToVerify || inputCode).trim();
+    setVerifyError(null);
+
+    if (!code) {
+      setVerifyError('يرجى إدخال كود الاستلام المكون من 6 أرقام');
+      return;
+    }
+
+    const result = dataService.verifyCodeForDelivery(code, currentMonth);
+    if (!result.isValid || !result.beneficiary || !result.codeRecord) {
+      setVerifyError(result.error || 'كود غير صالح');
+      return;
+    }
+
+    setVerifiedBeneficiary(result.beneficiary);
+    setVerifiedCodeRecord(result.codeRecord);
+    // Initialize empty cart or standard basic food basket
+    setCart([]);
+    setStep('pick_items');
+  };
+
+  // Quick fill helper for demo convenience
+  const handleQuickDemoCode = (code: string) => {
+    setInputCode(code);
+    handleVerify(code);
+  };
+
+  // Cart Management
+  const updateQuantity = (product: Product, delta: number) => {
+    setCart((prev) => {
+      const existing = prev.find((item) => item.productId === product.id);
+      if (existing) {
+        const newQty = existing.quantity + delta;
+        if (newQty <= 0) {
+          return prev.filter((item) => item.productId !== product.id);
+        }
+        return prev.map((item) =>
+          item.productId === product.id ? { ...item, quantity: newQty } : item
+        );
+      } else if (delta > 0) {
+        return [
+          ...prev,
+          {
+            productId: product.id,
+            productName: product.name,
+            pointsCost: product.pointsCost,
+            quantity: 1,
+          },
+        ];
+      }
+      return prev;
+    });
+  };
+
+  const getProductQuantityInCart = (productId: string): number => {
+    const found = cart.find((item) => item.productId === productId);
+    return found ? found.quantity : 0;
+  };
+
+  // Cart Totals
+  const totalCartPoints = cart.reduce((sum, item) => sum + item.pointsCost * item.quantity, 0);
+  const totalCartUnits = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const currentBalance = verifiedBeneficiary?.pointsBalance || 0;
+  const balanceAfter = currentBalance - totalCartPoints;
+  const isBalanceInsufficient = totalCartPoints > currentBalance;
+
+  // Confirm Atomic Delivery
+  const handleConfirmDelivery = async () => {
+    if (!verifiedBeneficiary || !verifiedCodeRecord || !currentUser) return;
+    if (cart.length === 0 || totalCartPoints === 0) {
+      setSubmitError('يرجى اختيار صنف تمويني واحد على الأقل قبل التأكيد');
+      return;
+    }
+    if (isBalanceInsufficient) {
+      setSubmitError('رصيد المستفيد غير كافٍ لإتمام عملية الصرف الحالية');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const result = await dataService.processCharityDeliveryAtomic({
+        code: verifiedCodeRecord.code,
+        currentMonth,
+        staffId: currentUser.id,
+        staffName: currentUser.fullName,
+        items: cart,
+        notes: deliveryNotes,
+      });
+
+      if (!result.success || !result.delivery) {
+        setSubmitError(result.error || 'فشلت عملية الصرف');
+        setIsSubmitting(false);
+        return;
+      }
+
+      setCompletedDelivery(result.delivery);
+      setStep('success_receipt');
+      onRefresh();
+    } catch {
+      setSubmitError('حدث خطأ غير متوقع أثناء معالجة المعاملة الذرية');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Reset for Next Delivery
+  const handleReset = () => {
+    setInputCode('');
+    setVerifyError(null);
+    setVerifiedBeneficiary(null);
+    setVerifiedCodeRecord(null);
+    setCart([]);
+    setDeliveryNotes('');
+    setCompletedDelivery(null);
+    setStep('verify_code');
+  };
+
+  // Print Receipt
+  const handlePrint = () => {
+    window.print();
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
+      {/* Step 1: Code Entry */}
+      {step === 'verify_code' && (
+        <div className="rounded-2xl bg-[#161D1A] border border-[#26312C] p-6 md:p-8 shadow-sm text-center max-w-2xl mx-auto space-y-6">
+          <div className="w-16 h-16 rounded-2xl bg-[#34C38F]/15 text-[#34C38F] flex items-center justify-center mx-auto shadow-lg shadow-[#34C38F]/10">
+            <KeyRound className="w-8 h-8" />
+          </div>
+
+          <div>
+            <h1 className="text-2xl font-extrabold text-[#E8EDEA]">
+              صرف وتسليم الحصة التموينية
+            </h1>
+            <p className="text-xs text-[#8A9690] mt-1.5 max-w-md mx-auto leading-relaxed">
+              أدخل كود الاستلام الشهري المكون من 6 أرقام والمستلم من قبل المستفيد عبر رسالة SMS
+              لشهر أكتوبر 2026.
+            </p>
+            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1C2521] border border-[#26312C] text-xs text-[#E0B35A]">
+              <span>منفذ التوزيع: مقر الجمعية الرئيسي بالقرية • خدمة أهالي قرية النسايمة</span>
+            </div>
+          </div>
+
+          {verifyError && (
+            <div className="p-3.5 rounded-xl bg-[#F0707A]/15 border border-[#F0707A]/30 text-[#F0707A] text-xs flex items-center justify-center gap-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span>{verifyError}</span>
+            </div>
+          )}
+
+          {/* 6-Digit Code Input Box */}
+          <div className="space-y-3">
+            <input
+              type="text"
+              maxLength={6}
+              value={inputCode}
+              onChange={(e) => setInputCode(e.target.value.replace(/\D/g, ''))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleVerify();
+              }}
+              placeholder="0 0 0 0 0 0"
+              className="w-full max-w-xs mx-auto text-center font-mono text-3xl font-extrabold tracking-[0.5em] px-4 py-3 rounded-2xl bg-[#1C2521] border-2 border-[#26312C] focus:border-[#34C38F] text-[#E0B35A] focus:outline-none shadow-inner"
+            />
+
+            <div>
+              <button
+                onClick={() => handleVerify()}
+                className="w-full max-w-xs mx-auto flex items-center justify-center gap-2 py-3 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] text-[#0F1412] font-bold text-sm shadow-lg transition active:scale-95"
+              >
+                <span>التحقق من الكود والمستفيد</span>
+                <ArrowRight className="w-4 h-4 rotate-180" />
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Demo Code Helpers */}
+          <div className="pt-6 border-t border-[#26312C]">
+            <span className="text-[11px] text-[#8A9690] block mb-2 font-medium">
+              أكواد تجريبية جاهزة للتجربة الفورية:
+            </span>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button
+                onClick={() => handleQuickDemoCode('482915')}
+                className="px-3 py-1.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-xs font-mono text-[#E0B35A] transition"
+              >
+                482915 (فاطمة - 140 نقطة)
+              </button>
+              <button
+                onClick={() => handleQuickDemoCode('739104')}
+                className="px-3 py-1.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-xs font-mono text-[#E0B35A] transition"
+              >
+                739104 (محمود - 175 نقطة)
+              </button>
+              <button
+                onClick={() => handleQuickDemoCode('195820')}
+                className="px-3 py-1.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-xs font-mono text-[#E0B35A] transition"
+              >
+                195820 (زينب - 110 نقطة)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Step 2: Pick Products & Quantities */}
+      {step === 'pick_items' && verifiedBeneficiary && (
+        <div className="space-y-6">
+          {/* Beneficiary Verified Top Card */}
+          <div className="rounded-2xl bg-[#161D1A] border border-[#26312C] p-5 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-xl bg-[#34C38F]/15 text-[#34C38F] flex items-center justify-center flex-shrink-0">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-extrabold text-[#E8EDEA]">
+                      {verifiedBeneficiary.fullName}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-[#34C38F]/15 text-[#34C38F] text-[10px] font-bold border border-[#34C38F]/30">
+                      كود صحيح لشهر أكتوبر 2026
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-[#8A9690] mt-1">
+                    <span>
+                      الرقم القومي: {maskNationalId(verifiedBeneficiary.nationalId)}
+                    </span>
+                    <span>•</span>
+                    <span>الهاتف: {verifiedBeneficiary.phone}</span>
+                    <span>•</span>
+                    <span>الأسرة: {verifiedBeneficiary.familySize} أفراد</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Current Points Balance Pill */}
+              <div className="flex items-center gap-3 bg-[#1C2521] border border-[#26312C] rounded-2xl p-3">
+                <div className="text-right">
+                  <div className="text-[11px] text-[#8A9690]">الرصيد المتاح للصرف</div>
+                  <div className="text-xl font-extrabold text-[#E0B35A]">
+                    {verifiedBeneficiary.pointsBalance}{' '}
+                    <span className="text-xs font-normal text-[#8A9690]">نقطة</span>
+                  </div>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-[#E0B35A]/15 text-[#E0B35A] flex items-center justify-center">
+                  <Coins className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {submitError && (
+            <div className="p-3.5 rounded-xl bg-[#F0707A]/15 border border-[#F0707A]/30 text-[#F0707A] text-xs flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span>{submitError}</span>
+            </div>
+          )}
+
+          {/* Two-Column Layout: Products Catalog on Right, Basket Summary on Left */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Products Catalog (8 cols) */}
+            <div className="lg:col-span-8 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold text-[#E8EDEA]">
+                  اختر السلع التموينية المطلوبة للحصة:
+                </h2>
+                <span className="text-xs text-[#8A9690]">
+                  السلع المتاحة ({products.filter((p) => p.isActive).length})
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {products
+                  .filter((p) => p.isActive)
+                  .map((product) => {
+                    const inCartQty = getProductQuantityInCart(product.id);
+                    return (
+                      <div
+                        key={product.id}
+                        className={`rounded-2xl border p-4 transition flex flex-col justify-between ${
+                          inCartQty > 0
+                            ? 'bg-[#1C2521] border-[#34C38F]/50 shadow-md'
+                            : 'bg-[#161D1A] border-[#26312C] hover:border-[#34C38F]/30'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <h4 className="font-bold text-[#E8EDEA] text-sm">
+                                {product.name}
+                              </h4>
+                              <div className="text-[11px] text-[#8A9690] mt-0.5">
+                                {product.unit} • {product.category}
+                              </div>
+                            </div>
+                            <div className="text-xs font-bold text-[#E0B35A] px-2 py-1 rounded-lg bg-[#E0B35A]/10 border border-[#E0B35A]/20 whitespace-nowrap">
+                              {product.pointsCost} نقطة
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Quantity Controls */}
+                        <div className="mt-4 pt-3 border-t border-[#26312C] flex items-center justify-between">
+                          <span className="text-xs text-[#8A9690]">الكمية المصروفة:</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => updateQuantity(product, -1)}
+                              disabled={inCartQty === 0}
+                              className="w-8 h-8 rounded-lg bg-[#26312C] hover:bg-[#32403a] disabled:opacity-30 disabled:hover:bg-[#26312C] text-[#E8EDEA] flex items-center justify-center transition"
+                              aria-label={`تقليل كمية ${product.name}`}
+                            >
+                              <Minus className="w-3.5 h-3.5" />
+                            </button>
+                            <span className="font-mono font-bold text-sm w-7 text-center text-[#E8EDEA]">
+                              {inCartQty}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(product, 1)}
+                              className="w-8 h-8 rounded-lg bg-[#34C38F] hover:bg-[#2bb27f] text-[#0F1412] font-bold flex items-center justify-center transition shadow-sm"
+                              aria-label={`زيادة كمية ${product.name}`}
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+
+            {/* Live Basket Summary & Confirmation (4 cols) */}
+            <div className="lg:col-span-4 rounded-2xl bg-[#161D1A] border border-[#26312C] p-5 shadow-sm space-y-4 sticky top-20">
+              <div className="flex items-center justify-between pb-3 border-b border-[#26312C]">
+                <div className="flex items-center gap-2">
+                  <ShoppingBag className="w-4 h-4 text-[#34C38F]" />
+                  <h3 className="font-bold text-sm text-[#E8EDEA]">ملخص الحصة</h3>
+                </div>
+                <span className="text-xs text-[#8A9690]">{totalCartUnits} قطع</span>
+              </div>
+
+              {/* Basket Items List */}
+              {cart.length === 0 ? (
+                <div className="py-8 text-center text-[#8A9690] text-xs">
+                  السلة فارغة. انقر على (+) لإضافة السلع.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {cart.map((item) => (
+                    <div
+                      key={item.productId}
+                      className="flex items-center justify-between text-xs py-1.5 border-b border-[#26312C]/60"
+                    >
+                      <div>
+                        <div className="font-medium text-[#E8EDEA]">{item.productName}</div>
+                        <div className="text-[10px] text-[#8A9690]">
+                          {item.quantity} × {item.pointsCost} نقطة
+                        </div>
+                      </div>
+                      <div className="font-bold text-[#E0B35A]">
+                        {item.quantity * item.pointsCost} نقطة
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Points Calculation Block */}
+              <div className="pt-3 border-t border-[#26312C] space-y-2 text-xs">
+                <div className="flex items-center justify-between text-[#8A9690]">
+                  <span>إجمالي تكلفة السلع:</span>
+                  <span className="font-bold text-[#E8EDEA]">{totalCartPoints} نقطة</span>
+                </div>
+                <div className="flex items-center justify-between text-[#8A9690]">
+                  <span>الرصيد المتوفر:</span>
+                  <span className="font-bold text-[#E0B35A]">{currentBalance} نقطة</span>
+                </div>
+                <div
+                  className={`flex items-center justify-between pt-2 border-t border-[#26312C] font-bold ${
+                    isBalanceInsufficient ? 'text-[#F0707A]' : 'text-[#34C38F]'
+                  }`}
+                >
+                  <span>الرصيد بعد الصرف:</span>
+                  <span className="text-sm">{balanceAfter} نقطة</span>
+                </div>
+              </div>
+
+              {isBalanceInsufficient && (
+                <div className="p-2.5 rounded-xl bg-[#F0707A]/15 border border-[#F0707A]/30 text-[#F0707A] text-[11px] leading-relaxed">
+                  تنبيه: إجمالي النقاط المطلوبة يتجاوز رصيد المستفيد. يرجى تقليل بعض الأصناف.
+                </div>
+              )}
+
+              {/* Notes */}
+              <div>
+                <label className="block text-[11px] text-[#8A9690] mb-1">
+                  ملاحظات الصرف (اختياري)
+                </label>
+                <input
+                  type="text"
+                  value={deliveryNotes}
+                  onChange={(e) => setDeliveryNotes(e.target.value)}
+                  placeholder="ملاحظات التسليم الميداني..."
+                  className="w-full bg-[#1C2521] border border-[#26312C] rounded-xl px-3 py-2 text-xs text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2 pt-2">
+                <button
+                  onClick={handleConfirmDelivery}
+                  disabled={cart.length === 0 || isBalanceInsufficient || isSubmitting}
+                  className="w-full py-3 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] disabled:opacity-40 disabled:hover:bg-[#34C38F] text-[#0F1412] font-bold text-sm shadow-md transition active:scale-95 flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <span>جارٍ معالجة الصرف الذري...</span>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>تأكيد الصرف وتسليم الحصة</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="w-full py-2 rounded-xl bg-[#1C2521] hover:bg-[#26312C] text-[#8A9690] text-xs font-semibold transition"
+                >
+                  إلغاء والعودة
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Success Screen & Printable Official Receipt */}
+      {step === 'success_receipt' && completedDelivery && (
+        <div className="rounded-2xl bg-[#161D1A] border border-[#26312C] p-6 md:p-8 shadow-2xl max-w-2xl mx-auto space-y-6 animate-fade-in text-center">
+          {/* Success Check Badge */}
+          <div className="w-16 h-16 rounded-2xl bg-[#34C38F]/20 text-[#34C38F] flex items-center justify-center mx-auto shadow-xl shadow-[#34C38F]/15">
+            <CheckCircle2 className="w-10 h-10" />
+          </div>
+
+          <div>
+            <span className="text-xs px-3 py-1 rounded-full bg-[#34C38F]/15 text-[#34C38F] font-bold border border-[#34C38F]/30">
+              معاملة ذرية ناجحة (Atomic Postgres RPC)
+            </span>
+            <h1 className="text-2xl font-extrabold text-[#E8EDEA] mt-2">
+              تم صرف وتسليم الحصة بنجاح
+            </h1>
+            <p className="text-xs text-[#8A9690] mt-1">
+              تم خصم النقاط من رصيد المستفيد وتوثيق التسليم وإغلاق كود الصرف لشهر أكتوبر 2026.
+            </p>
+          </div>
+
+          {/* Printable Receipt Box */}
+          <div
+            id="charity-receipt"
+            className="rounded-2xl bg-[#0F1412] border border-[#26312C] p-5 text-right text-xs space-y-4 shadow-inner"
+          >
+            {/* Receipt Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-[#26312C]">
+              <div>
+                <div className="font-extrabold text-sm text-[#E8EDEA]">جمعية عطاء الخيرية</div>
+                <div className="text-[10px] text-[#8A9690]">
+                  إيصال استلام حصة سلع تموينية • منفذ التوزيع: مقر الجمعية الرئيسي بالقرية (قرية النسايمة)
+                </div>
+              </div>
+              <div className="text-left font-mono">
+                <div className="text-[10px] text-[#8A9690]">كود الصرف:</div>
+                <div className="font-bold text-[#E0B35A] text-sm">
+                  {completedDelivery.deliveryCode}
+                </div>
+              </div>
+            </div>
+
+            {/* Receipt Details */}
+            <div className="grid grid-cols-2 gap-2 text-[#8A9690] text-[11px]">
+              <div>
+                المستفيد:{' '}
+                <strong className="text-[#E8EDEA]">{completedDelivery.beneficiaryName}</strong>
+              </div>
+              <div>
+                مسؤول الصرف:{' '}
+                <strong className="text-[#E8EDEA]">{completedDelivery.staffName}</strong>
+              </div>
+              <div>
+                التاريخ:{' '}
+                <strong className="text-[#E8EDEA]">
+                  {new Intl.DateTimeFormat('ar-EG', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  }).format(new Date(completedDelivery.createdAt))}
+                </strong>
+              </div>
+              <div>
+                رقم العملية:{' '}
+                <strong className="text-[#E8EDEA] font-mono">{completedDelivery.id.slice(0, 12)}</strong>
+              </div>
+            </div>
+
+            {/* Items Table in Receipt */}
+            <div className="pt-2">
+              <table className="w-full text-right text-[11px]">
+                <thead>
+                  <tr className="border-b border-[#26312C] text-[#8A9690]">
+                    <th className="pb-1">الصنف</th>
+                    <th className="pb-1">الكمية</th>
+                    <th className="pb-1">سعر النقطة</th>
+                    <th className="pb-1 text-left">الإجمالي</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#26312C]/40">
+                  {completedDelivery.items.map((it) => (
+                    <tr key={it.id}>
+                      <td className="py-1 text-[#E8EDEA]">{it.productName}</td>
+                      <td className="py-1 text-[#8A9690]">{it.quantity}</td>
+                      <td className="py-1 text-[#8A9690]">{it.unitPoints}</td>
+                      <td className="py-1 text-left font-bold text-[#E0B35A]">
+                        {it.subtotalPoints} نقطة
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Totals Summary */}
+            <div className="pt-3 border-t border-[#26312C] flex items-center justify-between text-xs font-bold">
+              <span className="text-[#8A9690]">إجمالي النقاط المصروفة:</span>
+              <span className="text-[#34C38F] text-sm">{completedDelivery.totalPoints} نقطة</span>
+            </div>
+            <div className="flex items-center justify-between text-xs font-semibold text-[#8A9690]">
+              <span>الرصيد المتبقي للمستفيد:</span>
+              <span className="text-[#E0B35A]">{completedDelivery.balanceAfter} نقطة</span>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1C2521] border border-[#26312C] text-[#E8EDEA] hover:bg-[#26312C] text-xs font-semibold transition"
+            >
+              <Printer className="w-4 h-4 text-[#34C38F]" />
+              <span>طباعة إيصال الاستلام</span>
+            </button>
+
+            <button
+              onClick={handleReset}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] text-[#0F1412] text-xs font-bold transition shadow-md"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>تسليم حصة أخرى</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

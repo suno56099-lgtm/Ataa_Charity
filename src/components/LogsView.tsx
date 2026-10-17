@@ -1,0 +1,287 @@
+import React, { useState } from 'react';
+import {
+  ClipboardList,
+  ShieldAlert,
+  Download,
+  Search,
+  Filter,
+  Eye,
+  ShoppingBag,
+  Sparkles,
+  UserCheck,
+} from 'lucide-react';
+import { DeliveryRecord, AuditLogEntry } from '../types/index.ts';
+import { dataService } from '../services/dataService.ts';
+
+interface LogsViewProps {
+  deliveries: DeliveryRecord[];
+  auditLogs: AuditLogEntry[];
+}
+
+export const LogsView: React.FC<LogsViewProps> = ({ deliveries, auditLogs }) => {
+  const [activeTab, setActiveTab] = useState<'deliveries' | 'audit'>('deliveries');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [staffFilter, setStaffFilter] = useState('الكل');
+
+  // Filter deliveries
+  const filteredDeliveries = deliveries.filter((d) => {
+    const matchesSearch =
+      !searchQuery.trim() ||
+      d.beneficiaryName.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+      d.deliveryCode.includes(searchQuery.trim()) ||
+      d.staffName.toLowerCase().includes(searchQuery.trim().toLowerCase());
+    const matchesStaff = staffFilter === 'الكل' || d.staffName === staffFilter;
+    return matchesSearch && matchesStaff;
+  });
+
+  // Unique staff names for filter dropdown
+  const uniqueStaff = Array.from(new Set(deliveries.map((d) => d.staffName)));
+
+  // Filter audit logs
+  const filteredAuditLogs = auditLogs.filter((l) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.trim().toLowerCase();
+    return (
+      l.actorName.toLowerCase().includes(q) ||
+      l.details.toLowerCase().includes(q) ||
+      (l.targetName && l.targetName.toLowerCase().includes(q))
+    );
+  });
+
+  // Action badge renderer
+  const renderAuditBadge = (action: string) => {
+    switch (action) {
+      case 'NATIONAL_ID_REVEAL':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#E0B35A]/15 text-[#E0B35A] border border-[#E0B35A]/30 font-semibold text-[11px]">
+            <Eye className="w-3 h-3" />
+            <span>كشف رقم قومي</span>
+          </span>
+        );
+      case 'DELIVERY_DISPATCH':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-semibold text-[11px]">
+            <ShoppingBag className="w-3 h-3" />
+            <span>صرف حصة</span>
+          </span>
+        );
+      case 'GENERATE_CODES':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-semibold text-[11px]">
+            <Sparkles className="w-3 h-3" />
+            <span>توليد أكواد</span>
+          </span>
+        );
+      case 'STAFF_LOGIN':
+      case 'STAFF_LOGOUT':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#1C2521] text-[#8A9690] border border-[#26312C] font-semibold text-[11px]">
+            <UserCheck className="w-3 h-3" />
+            <span>تسجيل دخول/خروج</span>
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#1C2521] text-[#8A9690] border border-[#26312C] font-semibold text-[11px]">
+            <span>{action}</span>
+          </span>
+        );
+    }
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Top Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#161D1A] border border-[#26312C] rounded-2xl p-5 shadow-sm">
+        <div>
+          <div className="flex items-center gap-2">
+            <ClipboardList className="w-5 h-5 text-[#34C38F]" />
+            <h1 className="text-xl font-bold text-[#E8EDEA]">سجل العمليات والتدقيق الأمني</h1>
+          </div>
+          <p className="text-xs text-[#8A9690] mt-1">
+            توثيق رقمي فوري لعمليات تسليم السلع وكشف الأرقام القومية وإجراءات فريق العمل.
+          </p>
+        </div>
+
+        {/* Tab Switcher & Export */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center bg-[#1C2521] border border-[#26312C] rounded-xl p-1 text-xs">
+            <button
+              onClick={() => setActiveTab('deliveries')}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition ${
+                activeTab === 'deliveries'
+                  ? 'bg-[#34C38F] text-[#0F1412] shadow-sm'
+                  : 'text-[#8A9690] hover:text-[#E8EDEA]'
+              }`}
+            >
+              عمليات الصرف ({deliveries.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('audit')}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 ${
+                activeTab === 'audit'
+                  ? 'bg-[#34C38F] text-[#0F1412] shadow-sm'
+                  : 'text-[#8A9690] hover:text-[#E8EDEA]'
+              }`}
+            >
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span>سجل التدقيق ({auditLogs.length})</span>
+            </button>
+          </div>
+
+          {activeTab === 'deliveries' && (
+            <button
+              onClick={() => dataService.exportDeliveriesCsv(filteredDeliveries)}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-[#E8EDEA] text-xs font-semibold transition"
+              title="تصدير السجل إلى ملف Excel / CSV متوافق مع اللغة العربية"
+            >
+              <Download className="w-4 h-4 text-[#34C38F]" />
+              <span>تصدير CSV</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Filter & Search Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#161D1A] border border-[#26312C] rounded-2xl p-4 shadow-sm">
+        <div className="flex items-center gap-2.5 bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2 flex-1 w-full">
+          <Search className="w-4 h-4 text-[#8A9690]" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={
+              activeTab === 'deliveries'
+                ? 'ابحث باسم المستفيد، كود الصرف، أو مسؤول الصرف...'
+                : 'ابحث في تفاصيل إجراءات التدقيق أو اسم الفاعل...'
+            }
+            className="w-full bg-transparent text-xs text-[#E8EDEA] placeholder-[#8A9690] focus:outline-none"
+          />
+        </div>
+
+        {activeTab === 'deliveries' && uniqueStaff.length > 0 && (
+          <div className="flex items-center gap-2 bg-[#1C2521] border border-[#26312C] rounded-xl px-3 py-2 text-xs w-full sm:w-auto">
+            <Filter className="w-3.5 h-3.5 text-[#34C38F]" />
+            <span className="text-[#8A9690]">الموظف:</span>
+            <select
+              value={staffFilter}
+              onChange={(e) => setStaffFilter(e.target.value)}
+              className="bg-transparent text-[#E8EDEA] font-semibold focus:outline-none"
+            >
+              <option value="الكل">جميع الموظفين</option>
+              {uniqueStaff.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* Deliveries Tab Content */}
+      {activeTab === 'deliveries' && (
+        <div className="bg-[#161D1A] border border-[#26312C] rounded-2xl p-5 shadow-sm">
+          {filteredDeliveries.length === 0 ? (
+            <div className="py-14 text-center text-[#8A9690] text-sm space-y-2">
+              <ClipboardList className="w-8 h-8 text-[#8A9690]/40 mx-auto" />
+              <p>لا توجد أي عمليات صرف مطابقة لمعايير البحث الحالية.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead>
+                  <tr className="border-b border-[#26312C] text-[#8A9690]">
+                    <th className="pb-3 pr-2">كود الصرف</th>
+                    <th className="pb-3">التاريخ والوقت</th>
+                    <th className="pb-3">اسم المستفيد</th>
+                    <th className="pb-3">مسؤول الصرف</th>
+                    <th className="pb-3">السلع والأصناف المسلمة</th>
+                    <th className="pb-3">إجمالي النقاط</th>
+                    <th className="pb-3">الرصيد السابق</th>
+                    <th className="pb-3 pl-2">الرصيد المتبقي</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#26312C]">
+                  {filteredDeliveries.map((del) => (
+                    <tr key={del.id} className="hover:bg-[#1C2521] transition">
+                      <td className="py-3.5 pr-2 font-mono font-bold text-[#E0B35A]">
+                        {del.deliveryCode}
+                      </td>
+                      <td className="py-3.5 text-[#8A9690]">
+                        {new Intl.DateTimeFormat('ar-EG', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        }).format(new Date(del.createdAt))}
+                      </td>
+                      <td className="py-3.5 font-semibold text-[#E8EDEA]">{del.beneficiaryName}</td>
+                      <td className="py-3.5 text-[#8A9690]">{del.staffName}</td>
+                      <td className="py-3.5 text-[#8A9690] max-w-xs">
+                        {del.items
+                          .map((i) => `${i.productName} (${i.quantity} × ${i.unitPoints}ن)`)
+                          .join(' + ')}
+                      </td>
+                      <td className="py-3.5 font-bold text-[#34C38F]">
+                        {del.totalPoints} نقطة
+                      </td>
+                      <td className="py-3.5 text-[#8A9690]">{del.balanceBefore} نقطة</td>
+                      <td className="py-3.5 pl-2 font-semibold text-[#E0B35A]">
+                        {del.balanceAfter} نقطة
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Security Audit Log Tab Content */}
+      {activeTab === 'audit' && (
+        <div className="bg-[#161D1A] border border-[#26312C] rounded-2xl p-5 shadow-sm space-y-4">
+          <div className="flex items-center justify-between text-xs text-[#8A9690] pb-2 border-b border-[#26312C]">
+            <span>
+              سجل التدقيق الأمني الموثق • غير قابل للتعديل أو الحذف
+            </span>
+            <span>النتائج: {filteredAuditLogs.length} حركة أمنية</span>
+          </div>
+
+          {filteredAuditLogs.length === 0 ? (
+            <div className="py-14 text-center text-[#8A9690] text-sm space-y-2">
+              <ShieldAlert className="w-8 h-8 text-[#8A9690]/40 mx-auto" />
+              <p>لا توجد سجلات تدقيق مطابقة لبحثك.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredAuditLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className="rounded-xl bg-[#1C2521] border border-[#26312C] p-3.5 text-xs flex flex-col md:flex-row md:items-center justify-between gap-3 hover:border-[#34C38F]/30 transition"
+                >
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex items-center gap-2">
+                      {renderAuditBadge(log.action)}
+                      <span className="font-bold text-[#E8EDEA]">{log.actorName}</span>
+                      <span className="text-[10px] text-[#8A9690]">
+                        ({log.actorRole === 'admin' ? 'مدير' : 'موظف'})
+                      </span>
+                    </div>
+                    <div className="text-[#8A9690] leading-relaxed">{log.details}</div>
+                  </div>
+
+                  <div className="text-[11px] text-[#8A9690] whitespace-nowrap self-end md:self-center">
+                    {new Intl.DateTimeFormat('ar-EG', {
+                      dateStyle: 'medium',
+                      timeStyle: 'medium',
+                    }).format(new Date(log.createdAt))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
