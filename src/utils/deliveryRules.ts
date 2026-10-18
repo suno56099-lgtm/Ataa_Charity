@@ -147,6 +147,43 @@ export function canAuthorizeDelivery(
   };
 }
 
+export interface PointsTierConfig {
+  tier1: number; // 1st member points (default 30)
+  tier2: number; // 2nd and 3rd members each (default 24)
+  tier3: number; // 4th to 7th members each (default 21)
+}
+
+export const DEFAULT_POINTS_TIERS: PointsTierConfig = {
+  tier1: 30,
+  tier2: 24,
+  tier3: 21,
+};
+
+/**
+ * Calculates family points automatically based on tiered formula (1 to 7 members)
+ * 1st member: tier1 (30)
+ * 2nd & 3rd members: tier2 (24 each)
+ * 4th to 7th members: tier3 (21 each)
+ * Results for defaults: 1=30, 2=54, 3=78, 4=99, 5=120, 6=141, 7=162
+ */
+export function calculateFamilyPoints(
+  familySize: number,
+  tiers: PointsTierConfig = DEFAULT_POINTS_TIERS
+): number {
+  const size = Math.max(1, Math.min(7, Math.floor(familySize || 1)));
+  let total = 0;
+  for (let i = 1; i <= size; i++) {
+    if (i === 1) {
+      total += (tiers.tier1 ?? 30);
+    } else if (i === 2 || i === 3) {
+      total += (tiers.tier2 ?? 24);
+    } else {
+      total += (tiers.tier3 ?? 21);
+    }
+  }
+  return total;
+}
+
 /**
  * Formats standard SMS message and link for Egyptian beneficiaries
  */
@@ -157,4 +194,48 @@ export function buildSmsLink(phone: string, code: string, monthKey: string): { s
   const cleanPhone = (phone || '').replace(/[\s-]/g, '');
   const smsUrl = `sms:${cleanPhone}?body=${encodeURIComponent(messageText)}`;
   return { smsUrl, messageText };
+}
+
+/**
+ * Checks if the remaining points balance is higher than or equal to the cheapest available product.
+ * Returns a warning to prevent leaving unspent points behind.
+ */
+export function checkLeftoverPointsWarning(
+  remainingBalance: number,
+  products: { name: string; pointsCost: number; isActive: boolean; isDeleted?: boolean }[]
+): {
+  hasExcessLeftover: boolean;
+  cheapestProduct?: { name: string; pointsCost: number };
+  warningMessageArabic?: string;
+} {
+  const activeProducts = (products || []).filter((p) => p.isActive && !p.isDeleted);
+  if (activeProducts.length === 0 || remainingBalance <= 0) {
+    return { hasExcessLeftover: false };
+  }
+
+  let cheapest = activeProducts[0];
+  for (const prod of activeProducts) {
+    if (prod.pointsCost < cheapest.pointsCost) {
+      cheapest = prod;
+    }
+  }
+
+  if (remainingBalance >= cheapest.pointsCost) {
+    return {
+      hasExcessLeftover: true,
+      cheapestProduct: {
+        name: cheapest.name,
+        pointsCost: cheapest.pointsCost,
+      },
+      warningMessageArabic: `تنبيه: الرصيد المتبقي للمستفيد (${remainingBalance} نقطة) يكفي لصرف سلع تموينية إضافية (مثل: ${cheapest.name} بتكلفة ${cheapest.pointsCost} نقطة). يرجى توجيه المستفيد لاختيار سلع إضافية لتفادي تبقي نقاط دون استغلال.`,
+    };
+  }
+
+  return {
+    hasExcessLeftover: false,
+    cheapestProduct: {
+      name: cheapest.name,
+      pointsCost: cheapest.pointsCost,
+    },
+  };
 }

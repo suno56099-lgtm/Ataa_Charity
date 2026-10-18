@@ -20,6 +20,9 @@ import {
   canAuthorizeDelivery,
   CartItem,
   formatMonthArabic,
+  calculateFamilyPoints,
+  PointsTierConfig,
+  DEFAULT_POINTS_TIERS,
 } from '../utils/deliveryRules.ts';
 import {
   validateEgyptianNationalId,
@@ -28,13 +31,14 @@ import {
 
 const STORAGE_KEYS = {
   CURRENT_USER: 'ataa_current_user',
-  STAFF: 'ataa_staff_v3',
-  BENEFICIARIES: 'ataa_beneficiaries_v3',
-  PRODUCTS: 'ataa_products_v3',
-  MONTHLY_CODES: 'ataa_monthly_codes_v3',
-  DELIVERIES: 'ataa_deliveries_v3',
-  AUDIT_LOGS: 'ataa_audit_logs_v3',
-  LOGIN_ATTEMPTS: 'ataa_login_attempts_v3',
+  STAFF: 'ataa_staff_v4',
+  BENEFICIARIES: 'ataa_beneficiaries_v4',
+  PRODUCTS: 'ataa_products_v5',
+  MONTHLY_CODES: 'ataa_monthly_codes_v4',
+  DELIVERIES: 'ataa_deliveries_v4',
+  AUDIT_LOGS: 'ataa_audit_logs_v4',
+  LOGIN_ATTEMPTS: 'ataa_login_attempts_v4',
+  POINTS_TIERS: 'ataa_points_tiers_v4',
 };
 
 // Seed Data
@@ -73,94 +77,124 @@ const INITIAL_STAFF: StaffAccount[] = [
 
 const INITIAL_PRODUCTS: Product[] = [
   {
-    id: 'p1',
-    name: 'زيت طعام عباد الشمس 1 لتر',
-    pointsCost: 25,
-    unit: 'زجاجة 1 لتر',
-    category: 'زيوت ودهون',
-    isActive: true,
-    createdAt: '2026-08-01T00:00:00Z',
-  },
-  {
-    id: 'p2',
-    name: 'أرز مصري درجة أولى 1 كجم',
-    pointsCost: 15,
-    unit: 'كيس 1 كجم',
+    id: 'prod_1',
+    name: 'أرز 800 جرام - ماركت',
+    pointsCost: 5,
+    unit: 'كيس 800 جم',
     category: 'حبوب وبقوليات',
     isActive: true,
-    createdAt: '2026-08-01T00:00:00Z',
+    isDeleted: false,
+    createdAt: '2026-10-01T00:00:00Z',
   },
   {
-    id: 'p3',
-    name: 'سكر ناعم معبأ 1 كجم',
-    pointsCost: 12,
-    unit: 'كيس 1 كجم',
-    category: 'حبوب وبقوليات',
-    isActive: true,
-    createdAt: '2026-08-01T00:00:00Z',
-  },
-  {
-    id: 'p4',
-    name: 'مكرونة فاخرة 400 جم',
-    pointsCost: 6,
+    id: 'prod_2',
+    name: 'سكر 400 جرام - ماركت',
+    pointsCost: 3,
     unit: 'كيس 400 جم',
     category: 'حبوب وبقوليات',
     isActive: true,
-    createdAt: '2026-08-01T00:00:00Z',
+    isDeleted: false,
+    createdAt: '2026-10-01T00:00:00Z',
   },
   {
-    id: 'p5',
-    name: 'عدس أصفر بلدي 500 جم',
+    id: 'prod_3',
+    name: 'زيت طعام 500 مللي',
     pointsCost: 10,
-    unit: 'كيس 500 جم',
-    category: 'حبوب وبقوليات',
+    unit: 'زجاجة 500 مللي',
+    category: 'زيوت ودهون',
     isActive: true,
-    createdAt: '2026-08-01T00:00:00Z',
+    isDeleted: false,
+    createdAt: '2026-10-01T00:00:00Z',
   },
   {
-    id: 'p6',
-    name: 'فول تدميس معبأ 500 جم',
-    pointsCost: 8,
-    unit: 'كيس 500 جم',
-    category: 'حبوب وبقوليات',
-    isActive: true,
-    createdAt: '2026-08-01T00:00:00Z',
-  },
-  {
-    id: 'p7',
-    name: 'جبنة بيضاء فيتا 500 جم',
-    pointsCost: 14,
-    unit: 'علبة 500 جم',
-    category: 'معلبات وألبان',
-    isActive: true,
-    createdAt: '2026-08-01T00:00:00Z',
-  },
-  {
-    id: 'p8',
-    name: 'شاي ناعم أسود 100 جم',
+    id: 'prod_4',
+    name: 'دقيق معبأ 1 كجم - ماركت',
     pointsCost: 5,
-    unit: 'باكيت 100 جم',
-    category: 'مشروبات ومكملات',
-    isActive: true,
-    createdAt: '2026-08-01T00:00:00Z',
-  },
-  {
-    id: 'p9',
-    name: 'دقيق أبيض فاخر 1 كجم',
-    pointsCost: 9,
     unit: 'كيس 1 كجم',
     category: 'حبوب وبقوليات',
     isActive: true,
-    createdAt: '2026-08-01T00:00:00Z',
+    isDeleted: false,
+    createdAt: '2026-10-01T00:00:00Z',
   },
   {
-    id: 'p10',
-    name: 'طبق لحم بلدي مجمد 1 كجم',
-    pointsCost: 55,
-    unit: 'طبق 1 كجم',
+    id: 'prod_5',
+    name: 'مكرونة 350 جرام - ماركت',
+    pointsCost: 2,
+    unit: 'كيس 350 جم',
+    category: 'حبوب وبقوليات',
+    isActive: true,
+    isDeleted: false,
+    createdAt: '2026-10-01T00:00:00Z',
+  },
+  {
+    id: 'prod_6',
+    name: 'عسل أسود 350 جرام',
+    pointsCost: 4,
+    unit: 'برطمان 350 جم',
+    category: 'معلبات وألبان',
+    isActive: true,
+    isDeleted: false,
+    createdAt: '2026-10-01T00:00:00Z',
+  },
+  {
+    id: 'prod_7',
+    name: 'عدس بجبة 400 جرام - ماركت',
+    pointsCost: 5,
+    unit: 'كيس 400 جم',
+    category: 'حبوب وبقوليات',
+    isActive: true,
+    isDeleted: false,
+    createdAt: '2026-10-01T00:00:00Z',
+  },
+  {
+    id: 'prod_8',
+    name: 'شعرية 350 جرام - ماركت',
+    pointsCost: 2,
+    unit: 'كيس 350 جم',
+    category: 'حبوب وبقوليات',
+    isActive: true,
+    isDeleted: false,
+    createdAt: '2026-10-01T00:00:00Z',
+  },
+  {
+    id: 'prod_9',
+    name: 'معلب كاند بيف 340 جم',
+    pointsCost: 8,
+    unit: 'علبة 340 جم',
     category: 'مجمدات ولحوم',
     isActive: true,
-    createdAt: '2026-08-01T00:00:00Z',
+    isDeleted: false,
+    createdAt: '2026-10-01T00:00:00Z',
+  },
+  {
+    id: 'prod_10',
+    name: 'صلصة طماطم 400 جم',
+    pointsCost: 7,
+    unit: 'برطمان 400 جم',
+    category: 'معلبات وألبان',
+    isActive: true,
+    isDeleted: false,
+    createdAt: '2026-10-01T00:00:00Z',
+  },
+  {
+    id: 'prod_11',
+    name: 'لسان عصفور ماركت 350 جرام',
+    pointsCost: 2,
+    unit: 'كيس 350 جم',
+    category: 'حبوب وبقوليات',
+    isActive: true,
+    isDeleted: false,
+    createdAt: '2026-10-01T00:00:00Z',
+  },
+  {
+    id: 'prod_12',
+    name: 'جبنة 250 جم',
+    pointsCost: 3,
+    unit: 'علبة 250 جم',
+    category: 'معلبات وألبان',
+    isActive: true,
+    isDeleted: false,
+    createdAt: '2026-10-01T00:00:00Z',
   },
 ];
 
@@ -172,7 +206,7 @@ const INITIAL_BENEFICIARIES: Beneficiary[] = [
     phone: '01014589231',
     address: 'قرية النسايمة',
     familySize: 5,
-    pointsBalance: 140,
+    pointsBalance: 120,
     notes: 'أرملة تعول 4 أبناء في مراحل التعليم',
     isActive: true,
     createdAt: '2026-08-10T10:00:00Z',
@@ -185,7 +219,7 @@ const INITIAL_BENEFICIARIES: Beneficiary[] = [
     phone: '01128945671',
     address: 'قرية النسايمة',
     familySize: 6,
-    pointsBalance: 175,
+    pointsBalance: 141,
     notes: 'عامل يومية غير منتظم - رب أسرة',
     isActive: true,
     createdAt: '2026-08-12T11:00:00Z',
@@ -198,7 +232,7 @@ const INITIAL_BENEFICIARIES: Beneficiary[] = [
     phone: '01278451290',
     address: 'قرية النسايمة',
     familySize: 4,
-    pointsBalance: 110,
+    pointsBalance: 99,
     notes: 'ربة منزل - مسنون بحاجة لرعاية',
     isActive: true,
     createdAt: '2026-08-15T09:30:00Z',
@@ -211,7 +245,7 @@ const INITIAL_BENEFICIARIES: Beneficiary[] = [
     phone: '01551239845',
     address: 'قرية النسايمة',
     familySize: 5,
-    pointsBalance: 95,
+    pointsBalance: 120,
     notes: 'من ذوي الاحتياجات الخاصة (إعاقة حركية)',
     isActive: true,
     createdAt: '2026-09-02T13:00:00Z',
@@ -224,7 +258,7 @@ const INITIAL_BENEFICIARIES: Beneficiary[] = [
     phone: '01096325874',
     address: 'قرية النسايمة',
     familySize: 3,
-    pointsBalance: 160,
+    pointsBalance: 78,
     notes: 'مطلقة تعول طفلين',
     isActive: true,
     createdAt: '2026-09-10T14:20:00Z',
@@ -565,11 +599,17 @@ class DataService {
     }
 
     const current = this.getCurrentUser();
+    const cleanFamilySize = Math.max(1, Math.min(7, Math.floor(data.familySize || 1)));
+    const tiers = this.getPointsTiers();
+    const calculatedPoints = calculateFamilyPoints(cleanFamilySize, tiers);
+
     const newBen: Beneficiary = {
       ...data,
       id: 'ben_' + Date.now(),
       nationalId: data.nationalId.trim(),
       phone: data.phone.trim(),
+      familySize: cleanFamilySize,
+      pointsBalance: calculatedPoints,
       isActive: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -682,28 +722,90 @@ class DataService {
     return { nationalId: ben.nationalId };
   }
 
+  // ================= Points Tiers Settings =================
+  getPointsTiers(): PointsTierConfig {
+    return this.getStorage<PointsTierConfig>(STORAGE_KEYS.POINTS_TIERS, DEFAULT_POINTS_TIERS);
+  }
+
+  updatePointsTiers(tiers: PointsTierConfig): { success: boolean; error?: string } {
+    if (!tiers || tiers.tier1 <= 0 || tiers.tier2 <= 0 || tiers.tier3 <= 0) {
+      return { success: false, error: 'قيم شرائح النقاط يجب أن تكون أعداداً صحيحة موجبة' };
+    }
+
+    const current = this.getCurrentUser();
+    this.setStorage(STORAGE_KEYS.POINTS_TIERS, tiers);
+
+    if (current) {
+      this.recordAuditLog({
+        action: 'POINTS_TIERS_UPDATE',
+        actorId: current.id,
+        actorName: current.fullName,
+        actorRole: current.role,
+        targetName: 'جدول شرائح النقاط',
+        details: `تحديث إعدادات شرائح النقاط للأسر: الفرد الأول=${tiers.tier1}ن، الفرد 2-3=${tiers.tier2}ن، الفرد 4-7=${tiers.tier3}ن`,
+      });
+    }
+
+    return { success: true };
+  }
+
   // ================= Products =================
-  getProducts(): Product[] {
+  getProducts(includeDeleted = false): Product[] {
+    const list = this.getStorage<Product[]>(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
+    if (includeDeleted) return list;
+    return list.filter((p) => !p.isDeleted);
+  }
+
+  getAllProducts(): Product[] {
     return this.getStorage<Product[]>(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
   }
 
-  addProduct(data: Omit<Product, 'id' | 'createdAt' | 'isActive'>): { success: boolean; error?: string } {
-    if (!data.name.trim()) return { success: false, error: 'اسم السلعة مطلوب' };
-    if (data.pointsCost <= 0) return { success: false, error: 'تكلفة النقاط يجب أن تكون أكبر من الصفر' };
+  addProduct(data: {
+    name: string;
+    pointsCost: number;
+    unit?: string;
+    category?: string;
+  }): { success: boolean; error?: string } {
+    const cleanName = (data.name || '').trim();
+    if (!cleanName) return { success: false, error: 'اسم السلعة التموينية مطلوب' };
 
-    const list = this.getProducts();
+    const points = Number(data.pointsCost);
+    if (!Number.isInteger(points) || points <= 0) {
+      return {
+        success: false,
+        error: 'تكلفة السلعة بالنقاط يجب أن تكون عدداً صحيحاً أكبر من الصفر',
+      };
+    }
+
+    const list = this.getAllProducts();
+    // Unique name check (case-insensitive across undeleted products)
+    if (
+      list.some(
+        (p) => !p.isDeleted && p.name.trim().toLowerCase() === cleanName.toLowerCase()
+      )
+    ) {
+      return {
+        success: false,
+        error: 'اسم السلعة مسجل مسبقاً، يرجى اختيار اسم فريد وغير مكرر',
+      };
+    }
+
+    const current = this.getCurrentUser();
     const newProd: Product = {
-      ...data,
       id: 'prod_' + Date.now(),
-      name: data.name.trim(),
+      name: cleanName,
+      pointsCost: points,
+      unit: (data.unit || 'عبوة').trim(),
+      category: (data.category || 'حبوب وبقوليات').trim(),
       isActive: true,
+      isDeleted: false,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     list.unshift(newProd);
     this.setStorage(STORAGE_KEYS.PRODUCTS, list);
 
-    const current = this.getCurrentUser();
     if (current) {
       this.recordAuditLog({
         action: 'PRODUCT_CREATE',
@@ -712,7 +814,7 @@ class DataService {
         actorRole: current.role,
         targetId: newProd.id,
         targetName: newProd.name,
-        details: `إضافة منتج تمويني جديد: ${newProd.name} بسعر (${newProd.pointsCost} نقطة)`,
+        details: `إضافة سلعة تموينية جديدة: ${newProd.name} بسعر (${newProd.pointsCost} نقطة)`,
       });
     }
 
@@ -720,11 +822,46 @@ class DataService {
   }
 
   updateProduct(id: string, updates: Partial<Product>): { success: boolean; error?: string } {
-    const list = this.getProducts();
+    const list = this.getAllProducts();
     const index = list.findIndex((p) => p.id === id);
-    if (index === -1) return { success: false, error: 'المنتج غير موجود' };
+    if (index === -1) return { success: false, error: 'السلعة غير موجودة' };
 
-    list[index] = { ...list[index], ...updates };
+    if (updates.name !== undefined) {
+      const cleanName = updates.name.trim();
+      if (!cleanName) return { success: false, error: 'اسم السلعة مطلوب' };
+
+      // Check unique name among other undeleted products
+      const isDuplicate = list.some(
+        (p) =>
+          p.id !== id &&
+          !p.isDeleted &&
+          p.name.trim().toLowerCase() === cleanName.toLowerCase()
+      );
+      if (isDuplicate) {
+        return {
+          success: false,
+          error: 'اسم السلعة مسجل مسبقاً لسلعة أخرى، يرجى اختيار اسم فريد',
+        };
+      }
+      updates.name = cleanName;
+    }
+
+    if (updates.pointsCost !== undefined) {
+      const points = Number(updates.pointsCost);
+      if (!Number.isInteger(points) || points <= 0) {
+        return {
+          success: false,
+          error: 'تكلفة السلعة بالنقاط يجب أن تكون عدداً صحيحاً أكبر من الصفر',
+        };
+      }
+      updates.pointsCost = points;
+    }
+
+    list[index] = {
+      ...list[index],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
     this.setStorage(STORAGE_KEYS.PRODUCTS, list);
 
     const current = this.getCurrentUser();
@@ -736,7 +873,65 @@ class DataService {
         actorRole: current.role,
         targetId: id,
         targetName: list[index].name,
-        details: `تحديث بيانات المنتج: ${list[index].name}`,
+        details: `تحديث بيانات السلعة التموينية: ${list[index].name} (السعر: ${list[index].pointsCost} نقطة)`,
+      });
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * Soft delete: hides product from new deliveries while fully preserving past delivery records
+   */
+  deleteProduct(id: string): { success: boolean; error?: string } {
+    const list = this.getAllProducts();
+    const index = list.findIndex((p) => p.id === id);
+    if (index === -1) return { success: false, error: 'السلعة غير موجودة' };
+
+    const prod = list[index];
+    prod.isDeleted = true;
+    prod.isActive = false;
+    prod.updatedAt = new Date().toISOString();
+
+    this.setStorage(STORAGE_KEYS.PRODUCTS, list);
+
+    const current = this.getCurrentUser();
+    if (current) {
+      this.recordAuditLog({
+        action: 'PRODUCT_DELETE',
+        actorId: current.id,
+        actorName: current.fullName,
+        actorRole: current.role,
+        targetId: id,
+        targetName: prod.name,
+        details: `حذف (أرشفة وحجب) السلعة التموينية: ${prod.name} مع الحفاظ على السجلات السابقة كاملة دون تأثر`,
+      });
+    }
+
+    return { success: true };
+  }
+
+  restoreProduct(id: string): { success: boolean; error?: string } {
+    const list = this.getAllProducts();
+    const prod = list.find((p) => p.id === id);
+    if (!prod) return { success: false, error: 'السلعة غير موجودة' };
+
+    prod.isDeleted = false;
+    prod.isActive = true;
+    prod.updatedAt = new Date().toISOString();
+
+    this.setStorage(STORAGE_KEYS.PRODUCTS, list);
+
+    const current = this.getCurrentUser();
+    if (current) {
+      this.recordAuditLog({
+        action: 'PRODUCT_UPDATE',
+        actorId: current.id,
+        actorName: current.fullName,
+        actorRole: current.role,
+        targetId: id,
+        targetName: prod.name,
+        details: `استعادة السلعة التموينية: ${prod.name} وإعادتها لقائمة السلع النشطة المتاحة للتوزيع`,
       });
     }
 
@@ -744,11 +939,12 @@ class DataService {
   }
 
   toggleProduct(id: string): { success: boolean; error?: string } {
-    const list = this.getProducts();
+    const list = this.getAllProducts();
     const prod = list.find((p) => p.id === id);
-    if (!prod) return { success: false, error: 'المنتج غير موجود' };
+    if (!prod) return { success: false, error: 'السلعة غير موجودة' };
 
     prod.isActive = !prod.isActive;
+    prod.updatedAt = new Date().toISOString();
     this.setStorage(STORAGE_KEYS.PRODUCTS, list);
     return { success: true };
   }

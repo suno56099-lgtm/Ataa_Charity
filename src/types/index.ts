@@ -36,7 +36,15 @@ export interface Product {
   unit: string;
   category: string;
   isActive: boolean;
+  isDeleted?: boolean;
   createdAt: string;
+  updatedAt?: string;
+}
+
+export interface PointsTierConfig {
+  tier1: number; // 1st member points (default 30)
+  tier2: number; // 2nd and 3rd member points each (default 24)
+  tier3: number; // 4th to 7th member points each (default 21)
 }
 
 export type CodeStatus = 'available' | 'used';
@@ -93,6 +101,8 @@ export type AuditActionType =
   | 'BENEFICIARY_UPDATE'
   | 'PRODUCT_CREATE'
   | 'PRODUCT_UPDATE'
+  | 'PRODUCT_DELETE'
+  | 'POINTS_TIERS_UPDATE'
   | 'STAFF_CREATE'
   | 'STAFF_TOGGLE'
   | 'STAFF_RESET_PWD'
