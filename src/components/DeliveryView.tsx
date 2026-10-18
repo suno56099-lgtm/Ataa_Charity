@@ -8,14 +8,14 @@ import {
   Plus,
   Minus,
   ArrowRight,
-  Printer,
   ShieldCheck,
   RotateCcw,
 } from 'lucide-react';
 import { Product, Beneficiary, MonthlyCode, DeliveryRecord, StaffAccount } from '../types/index.ts';
 import { dataService } from '../services/dataService.ts';
-import { CartItem, checkLeftoverPointsWarning } from '../utils/deliveryRules.ts';
+import { CartItem } from '../utils/deliveryRules.ts';
 import { maskNationalId } from '../utils/egyptianValidation.ts';
+import { InvoiceModal } from './InvoiceModal.tsx';
 
 interface DeliveryViewProps {
   products: Product[];
@@ -45,7 +45,7 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [showLeftoverModal, setShowLeftoverModal] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Completed Delivery
   const [completedDelivery, setCompletedDelivery] = useState<DeliveryRecord | null>(null);
@@ -118,15 +118,11 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
   const balanceAfter = currentBalance - totalCartPoints;
   const isBalanceInsufficient = totalCartPoints > currentBalance;
 
-  // Leftover points warning check
-  const leftoverWarning = checkLeftoverPointsWarning(balanceAfter, products);
-
-  // Execute Atomic Delivery
+  // Execute Atomic Delivery - only called after explicit confirmation
   const executeDelivery = async () => {
     if (!verifiedBeneficiary || !verifiedCodeRecord || !currentUser) return;
     setIsSubmitting(true);
     setSubmitError(null);
-    setShowLeftoverModal(false);
 
     try {
       const result = await dataService.processCharityDeliveryAtomic({
@@ -145,6 +141,7 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
       }
 
       setCompletedDelivery(result.delivery);
+      setShowConfirmDialog(false);
       setStep('success_receipt');
       onRefresh();
     } catch {
@@ -154,8 +151,8 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
     }
   };
 
-  // Confirm Atomic Delivery (warns staff if leftover points exist)
-  const handleConfirmDelivery = () => {
+  // Open confirmation dialog when staff presses "تسليم"
+  const handleOpenConfirmDialog = () => {
     if (!verifiedBeneficiary || !verifiedCodeRecord || !currentUser) return;
     if (cart.length === 0 || totalCartPoints === 0) {
       setSubmitError('يرجى اختيار صنف تمويني واحد على الأقل قبل التأكيد');
@@ -166,13 +163,8 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
       return;
     }
 
-    // Warn staff before confirming if leftover points are sufficient for cheapest product
-    if (leftoverWarning.hasExcessLeftover) {
-      setShowLeftoverModal(true);
-      return;
-    }
-
-    executeDelivery();
+    setSubmitError(null);
+    setShowConfirmDialog(true);
   };
 
   // Reset for Next Delivery
@@ -468,22 +460,6 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
                 </div>
               )}
 
-              {/* Leftover Points Warning */}
-              {leftoverWarning.hasExcessLeftover && cart.length > 0 && !isBalanceInsufficient && (
-                <div className="p-3 rounded-xl bg-[#E0B35A]/15 border border-[#E0B35A]/40 text-[#E0B35A] text-[11px] leading-relaxed space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold">
-                    <AlertTriangle className="w-4 h-4 text-[#E0B35A] flex-shrink-0" />
-                    <span>تنبيه لمنع تبقي نقاط:</span>
-                  </div>
-                  <p className="text-[10px] text-[#E8EDEA]/90 leading-normal">
-                    الرصيد المتبقي بعد الصرف ({balanceAfter} نقطة) يكفي لصرف سلعة إضافية (أرخص سلعة: {leftoverWarning.cheapestProduct?.name} بتكلفة {leftoverWarning.cheapestProduct?.pointsCost} نقطة).
-                  </p>
-                  <p className="text-[10px] text-[#E0B35A] font-semibold">
-                    يرجى توجيه المستفيد لاختيار سلع إضافية للاستفادة الكاملة من نقاط دعمه.
-                  </p>
-                </div>
-              )}
-
               {/* Notes */}
               <div>
                 <label className="block text-[11px] text-[#8A9690] mb-1">
@@ -501,18 +477,13 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
               {/* Action Buttons */}
               <div className="space-y-2 pt-2">
                 <button
-                  onClick={() => handleConfirmDelivery()}
+                  type="button"
+                  onClick={handleOpenConfirmDialog}
                   disabled={cart.length === 0 || isBalanceInsufficient || isSubmitting}
                   className="w-full py-3 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] disabled:opacity-40 disabled:hover:bg-[#34C38F] text-[#0F1412] font-bold text-sm shadow-md transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  {isSubmitting ? (
-                    <span>جارٍ معالجة الصرف الذري...</span>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>تأكيد الصرف وتسليم الحصة</span>
-                    </>
-                  )}
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>تسليم الحصة التموينية</span>
                 </button>
 
                 <button
@@ -541,74 +512,125 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
                     </span>
                   </div>
                   <div className="text-[10px] text-[#34C38F]">
-                    {isBalanceInsufficient ? 'تجاوز الرصيد المتاح!' : 'جاهز لإتمام الصرف'}
+                    {isBalanceInsufficient ? 'تجاوز الرصيد المتاح!' : 'جاهز للتسليم'}
                   </div>
                 </div>
               </div>
 
               <button
-                onClick={() => {
-                  const el = document.getElementById('basket-summary');
-                  if (el) {
-                    el.scrollIntoView({ behavior: 'smooth' });
-                  }
-                }}
-                className="flex items-center gap-1 px-3 py-2 rounded-xl bg-[#34C38F] text-[#0F1412] font-bold text-xs shadow-md active:scale-95 transition cursor-pointer"
+                type="button"
+                onClick={handleOpenConfirmDialog}
+                disabled={cart.length === 0 || isBalanceInsufficient || isSubmitting}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] disabled:opacity-40 text-[#0F1412] font-bold text-xs shadow-md active:scale-95 transition cursor-pointer"
               >
-                <span>مراجعة وتأكيد</span>
-                <ArrowRight className="w-3.5 h-3.5 rotate-90" />
+                <span>تسليم</span>
+                <CheckCircle2 className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
 
-          {/* Leftover Points Confirmation Modal */}
-          {showLeftoverModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 animate-fade-in">
-              <div className="w-full max-w-md rounded-2xl bg-[#161D1A] border border-[#E0B35A]/50 p-6 shadow-2xl text-[#E8EDEA] space-y-4">
+          {/* Confirmation Dialog Step */}
+          {showConfirmDialog && verifiedBeneficiary && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-4 animate-fade-in no-print">
+              <div className="w-full max-w-lg rounded-2xl bg-[#161D1A] border border-[#34C38F]/50 p-5 sm:p-6 shadow-2xl text-[#E8EDEA] space-y-4 max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center gap-3 pb-3 border-b border-[#26312C]">
-                  <div className="w-10 h-10 rounded-xl bg-[#E0B35A]/20 text-[#E0B35A] flex items-center justify-center flex-shrink-0">
-                    <AlertTriangle className="w-6 h-6" />
+                  <div className="w-10 h-10 rounded-xl bg-[#34C38F]/20 text-[#34C38F] flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-6 h-6" />
                   </div>
                   <div>
                     <h3 className="font-bold text-base text-[#E8EDEA]">
-                      تنبيه هام: تبقي نقاط غير مستغلة!
+                      تأكيد تسليم الحصة التموينية
                     </h3>
-                    <span className="text-[11px] text-[#8A9690]">
-                      تحذير الموظف لتفادي ضياع نقاط المستفيد
+                    <span className="text-xs text-[#8A9690]">
+                      مراجعة بيانات المستفيد والأصناف قبل تأكيد الصرف
                     </span>
                   </div>
                 </div>
 
-                <div className="space-y-2 text-xs leading-relaxed text-[#8A9690] bg-[#1C2521] p-3.5 rounded-xl border border-[#26312C]">
-                  <p className="text-[#E8EDEA] font-semibold">
-                    الرصيد المتبقي للمستفيد بعد هذه السلة هو{' '}
-                    <span className="text-[#E0B35A] font-extrabold text-sm">{balanceAfter} نقطة</span>.
-                  </p>
-                  <p>
-                    هذا الرصيد يكفي لصرف سلع إضافية مثل:
-                    <span className="text-[#34C38F] font-bold mr-1">
-                      {leftoverWarning.cheapestProduct?.name} ({leftoverWarning.cheapestProduct?.pointsCost} نقطة)
-                    </span>.
-                  </p>
-                  <p className="text-[11px] text-[#E0B35A]">
-                    هل تود التوقف وإرشاد المستفيد لاختيار سلع إضافية، أم ترغب في المتابعة وتأكيد الصرف الآن؟
+                {/* Beneficiary details (Name, Phone, Code - no national id needed here) */}
+                <div className="p-3 bg-[#1C2521] rounded-xl border border-[#26312C] space-y-1.5 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#8A9690]">اسم المستفيد:</span>
+                    <strong className="text-sm font-bold text-[#E8EDEA]">{verifiedBeneficiary.fullName}</strong>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#8A9690]">رقم الهاتف:</span>
+                    <span className="font-mono text-[#E8EDEA]">{verifiedBeneficiary.phone}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#8A9690]">كود الاستلام:</span>
+                    <span className="font-mono font-bold text-[#E0B35A]">{verifiedCodeRecord?.code}</span>
+                  </div>
+                </div>
+
+                {/* Chosen items with quantities */}
+                <div className="space-y-1.5">
+                  <div className="font-semibold text-xs text-[#8A9690]">
+                    الأصناف المختارة ({totalCartUnits} قطعة):
+                  </div>
+                  <div className="max-h-44 overflow-y-auto border border-[#26312C] rounded-xl divide-y divide-[#26312C] bg-[#1C2521]">
+                    {cart.map((item) => (
+                      <div key={item.productId} className="flex justify-between items-center px-3 py-2 text-xs">
+                        <div>
+                          <span className="font-medium text-[#E8EDEA]">{item.productName}</span>
+                          <span className="text-[11px] text-[#8A9690] mr-2">
+                            ({item.pointsCost} نقطة)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono font-bold text-[#E8EDEA]">× {item.quantity}</span>
+                          <span className="font-mono font-bold text-[#34C38F] w-14 text-left">
+                            {item.pointsCost * item.quantity}ن
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Points Summary */}
+                <div className="p-3.5 bg-[#161D1A] rounded-xl border border-[#26312C] space-y-1.5 text-xs">
+                  <div className="flex justify-between items-center text-[#8A9690]">
+                    <span>رصيد الأسرة المتاح:</span>
+                    <span className="font-mono font-bold text-[#E8EDEA]">{currentBalance} نقطة</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[#34C38F] font-bold">
+                    <span>إجمالي نقاط الأصناف:</span>
+                    <span className="font-mono text-sm">{totalCartPoints} نقطة</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-[#26312C] text-[#E0B35A] font-bold">
+                    <span>الرصيد المتبقي:</span>
+                    <span className="font-mono text-sm">{balanceAfter} نقطة</span>
+                  </div>
+                  <p className="text-[10px] text-[#8A9690] pt-1">
+                    * ملاحظة: النقاط المتبقية ({balanceAfter} نقطة) تنتهي صلاحيتها بانتهاء هذا الصرف ولا ترحل.
                   </p>
                 </div>
 
+                {/* Action buttons: Only تأكيد التسليم saves the delivery. Disabled while saving */}
                 <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-2.5">
                   <button
                     type="button"
-                    onClick={() => setShowLeftoverModal(false)}
-                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] text-[#0F1412] font-bold text-xs transition cursor-pointer"
+                    onClick={() => setShowConfirmDialog(false)}
+                    disabled={isSubmitting}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] text-xs font-semibold transition cursor-pointer disabled:opacity-50"
                   >
-                    العودة لاختيار سلع إضافية
+                    إلغاء
                   </button>
                   <button
                     type="button"
-                    onClick={() => executeDelivery()}
-                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] text-xs font-semibold transition cursor-pointer"
+                    onClick={executeDelivery}
+                    disabled={isSubmitting}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] disabled:opacity-50 text-[#0F1412] font-bold text-xs transition cursor-pointer shadow-lg active:scale-95"
                   >
-                    متابعة الصرف على أي حال
+                    {isSubmitting ? (
+                      <span>جاري حفظ وتأكيد التسليم...</span>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>تأكيد التسليم</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -617,128 +639,14 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
         </div>
       )}
 
-      {/* Step 3: Success Screen & Printable Official Receipt */}
+      {/* Step 3: Success Screen with Official Printable Invoice */}
       {step === 'success_receipt' && completedDelivery && (
-        <div className="rounded-2xl bg-[#161D1A] border border-[#26312C] p-6 md:p-8 shadow-2xl max-w-2xl mx-auto space-y-6 animate-fade-in text-center">
-          {/* Success Check Badge */}
-          <div className="w-16 h-16 rounded-2xl bg-[#34C38F]/20 text-[#34C38F] flex items-center justify-center mx-auto shadow-xl shadow-[#34C38F]/15">
-            <CheckCircle2 className="w-10 h-10" />
-          </div>
-
-          <div>
-            <span className="text-xs px-3 py-1 rounded-full bg-[#34C38F]/15 text-[#34C38F] font-bold border border-[#34C38F]/30">
-              معاملة ذرية ناجحة (Atomic Postgres RPC)
-            </span>
-            <h1 className="text-2xl font-extrabold text-[#E8EDEA] mt-2">
-              تم صرف وتسليم الحصة بنجاح
-            </h1>
-            <p className="text-xs text-[#8A9690] mt-1">
-              تم خصم النقاط من رصيد المستفيد وتوثيق التسليم وإغلاق كود الصرف لشهر أكتوبر 2026.
-            </p>
-          </div>
-
-          {/* Printable Receipt Box */}
-          <div
-            id="charity-receipt"
-            className="rounded-2xl bg-[#0F1412] border border-[#26312C] p-5 text-right text-xs space-y-4 shadow-inner"
-          >
-            {/* Receipt Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-[#26312C]">
-              <div>
-                <div className="font-extrabold text-sm text-[#E8EDEA]">جمعية عطاء الخيرية</div>
-                <div className="text-[10px] text-[#8A9690]">
-                  إيصال استلام حصة سلع تموينية • منفذ التوزيع: مقر الجمعية الرئيسي بالقرية (قرية النسايمة)
-                </div>
-              </div>
-              <div className="text-left font-mono">
-                <div className="text-[10px] text-[#8A9690]">كود الصرف:</div>
-                <div className="font-bold text-[#E0B35A] text-sm">
-                  {completedDelivery.deliveryCode}
-                </div>
-              </div>
-            </div>
-
-            {/* Receipt Details */}
-            <div className="grid grid-cols-2 gap-2 text-[#8A9690] text-[11px]">
-              <div>
-                المستفيد:{' '}
-                <strong className="text-[#E8EDEA]">{completedDelivery.beneficiaryName}</strong>
-              </div>
-              <div>
-                مسؤول الصرف:{' '}
-                <strong className="text-[#E8EDEA]">{completedDelivery.staffName}</strong>
-              </div>
-              <div>
-                التاريخ:{' '}
-                <strong className="text-[#E8EDEA]">
-                  {new Intl.DateTimeFormat('ar-EG', {
-                    dateStyle: 'medium',
-                    timeStyle: 'short',
-                  }).format(new Date(completedDelivery.createdAt))}
-                </strong>
-              </div>
-              <div>
-                رقم العملية:{' '}
-                <strong className="text-[#E8EDEA] font-mono">{completedDelivery.id.slice(0, 12)}</strong>
-              </div>
-            </div>
-
-            {/* Items Table in Receipt */}
-            <div className="pt-2">
-              <table className="w-full text-right text-[11px]">
-                <thead>
-                  <tr className="border-b border-[#26312C] text-[#8A9690]">
-                    <th className="pb-1">الصنف</th>
-                    <th className="pb-1">الكمية</th>
-                    <th className="pb-1">سعر النقطة</th>
-                    <th className="pb-1 text-left">الإجمالي</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#26312C]/40">
-                  {completedDelivery.items.map((it) => (
-                    <tr key={it.id}>
-                      <td className="py-1 text-[#E8EDEA]">{it.productName}</td>
-                      <td className="py-1 text-[#8A9690]">{it.quantity}</td>
-                      <td className="py-1 text-[#8A9690]">{it.unitPoints}</td>
-                      <td className="py-1 text-left font-bold text-[#E0B35A]">
-                        {it.subtotalPoints} نقطة
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Totals Summary */}
-            <div className="pt-3 border-t border-[#26312C] flex items-center justify-between text-xs font-bold">
-              <span className="text-[#8A9690]">إجمالي النقاط المصروفة:</span>
-              <span className="text-[#34C38F] text-sm">{completedDelivery.totalPoints} نقطة</span>
-            </div>
-            <div className="flex items-center justify-between text-xs font-semibold text-[#8A9690]">
-              <span>الرصيد المتبقي للمستفيد:</span>
-              <span className="text-[#E0B35A]">{completedDelivery.balanceAfter} نقطة</span>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-center gap-3 pt-2">
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1C2521] border border-[#26312C] text-[#E8EDEA] hover:bg-[#26312C] text-xs font-semibold transition"
-            >
-              <Printer className="w-4 h-4 text-[#34C38F]" />
-              <span>طباعة إيصال الاستلام</span>
-            </button>
-
-            <button
-              onClick={handleReset}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] text-[#0F1412] text-xs font-bold transition shadow-md"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>تسليم حصة أخرى</span>
-            </button>
-          </div>
-        </div>
+        <InvoiceModal
+          delivery={completedDelivery}
+          isNewDeliverySuccess={true}
+          onNewDelivery={handleReset}
+          onClose={handleReset}
+        />
       )}
     </div>
   );

@@ -9,9 +9,11 @@ import {
   ShoppingBag,
   Sparkles,
   UserCheck,
+  Receipt,
 } from 'lucide-react';
 import { DeliveryRecord, AuditLogEntry } from '../types/index.ts';
 import { dataService } from '../services/dataService.ts';
+import { InvoiceModal } from './InvoiceModal.tsx';
 
 interface LogsViewProps {
   deliveries: DeliveryRecord[];
@@ -22,6 +24,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ deliveries, auditLogs }) => 
   const [activeTab, setActiveTab] = useState<'deliveries' | 'audit'>('deliveries');
   const [searchQuery, setSearchQuery] = useState('');
   const [staffFilter, setStaffFilter] = useState('الكل');
+  const [selectedDeliveryForInvoice, setSelectedDeliveryForInvoice] = useState<DeliveryRecord | null>(null);
 
   // Filter deliveries
   const filteredDeliveries = deliveries.filter((d) => {
@@ -213,7 +216,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ deliveries, auditLogs }) => 
                       {del.items.map((i) => `${i.productName} (${i.quantity} × ${i.unitPoints}ن)`).join(' + ')}
                     </div>
 
-                    {/* Points balance */}
+                    {/* Points balance & Invoice Action */}
                     <div className="flex items-center justify-between pt-1 border-t border-[#26312C] text-[11px]">
                       <div>
                         <span>النقاط: </span>
@@ -221,8 +224,19 @@ export const LogsView: React.FC<LogsViewProps> = ({ deliveries, auditLogs }) => 
                       </div>
                       <div className="text-[#8A9690]">
                         <span>المتبقي: </span>
-                        <strong className="text-[#E0B35A]">{del.balanceAfter} نقطة</strong>
+                        <strong className="text-[#E0B35A]">{del.expired_points ?? del.balanceAfter} نقطة</strong>
                       </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-[#26312C]/60 flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDeliveryForInvoice(del)}
+                        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#161D1A] border border-[#26312C] hover:border-[#34C38F]/50 text-[#34C38F] text-xs font-bold transition shadow-sm cursor-pointer active:scale-95"
+                      >
+                        <Receipt className="w-4 h-4" />
+                        <span>استعراض الفاتورة / طباعة وحفظ</span>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -240,7 +254,8 @@ export const LogsView: React.FC<LogsViewProps> = ({ deliveries, auditLogs }) => 
                       <th className="pb-3">السلع والأصناف المسلمة</th>
                       <th className="pb-3">إجمالي النقاط</th>
                       <th className="pb-3">الرصيد السابق</th>
-                      <th className="pb-3 pl-2">الرصيد المتبقي</th>
+                      <th className="pb-3">الرصيد المتبقي</th>
+                      <th className="pb-3 pl-2 text-center">الفاتورة</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#26312C]">
@@ -266,8 +281,19 @@ export const LogsView: React.FC<LogsViewProps> = ({ deliveries, auditLogs }) => 
                           {del.totalPoints} نقطة
                         </td>
                         <td className="py-3.5 text-[#8A9690]">{del.balanceBefore} نقطة</td>
-                        <td className="py-3.5 pl-2 font-semibold text-[#E0B35A]">
-                          {del.balanceAfter} نقطة
+                        <td className="py-3.5 font-semibold text-[#E0B35A]">
+                          {del.expired_points ?? del.balanceAfter} نقطة
+                        </td>
+                        <td className="py-3.5 pl-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDeliveryForInvoice(del)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#161D1A] border border-[#26312C] hover:border-[#34C38F]/50 hover:bg-[#34C38F]/10 text-[#34C38F] font-bold text-xs transition cursor-pointer"
+                            title="عرض الفاتورة الرسمية وطباعتها"
+                          >
+                            <Receipt className="w-3.5 h-3.5" />
+                            <span>الفاتورة</span>
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -323,6 +349,15 @@ export const LogsView: React.FC<LogsViewProps> = ({ deliveries, auditLogs }) => 
             </div>
           )}
         </div>
+      )}
+
+      {/* Invoice Modal for past delivery records */}
+      {selectedDeliveryForInvoice && (
+        <InvoiceModal
+          delivery={selectedDeliveryForInvoice}
+          isNewDeliverySuccess={false}
+          onClose={() => setSelectedDeliveryForInvoice(null)}
+        />
       )}
     </div>
   );

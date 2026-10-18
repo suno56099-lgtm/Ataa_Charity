@@ -190,9 +190,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </aside>
 
-      {/* Mobile Drawer (Slide-over from Right in RTL) */}
+      {/* Slide-over Drawer from the RIGHT */}
       {isMobileDrawerOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex justify-end">
+        <div className="fixed inset-0 z-50">
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-[#0F1412]/80 backdrop-blur-sm transition-opacity"
@@ -200,8 +200,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             aria-hidden="true"
           />
 
-          {/* Drawer Sheet */}
-          <div className="relative w-full max-w-xs sm:max-w-sm bg-[#161D1A] border-r border-[#26312C] h-full shadow-2xl flex flex-col z-10 animate-fade-in">
+          {/* Drawer Sheet anchored to the RIGHT */}
+          <div className="fixed top-0 bottom-0 right-0 w-full max-w-xs sm:max-w-sm bg-[#161D1A] border-l border-[#26312C] h-full shadow-2xl flex flex-col z-50 animate-fade-in">
             {/* Drawer Header */}
             <div className="p-4 border-b border-[#26312C] flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -215,7 +215,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               <button
                 onClick={onCloseMobileDrawer}
-                className="p-2 rounded-xl bg-[#1C2521] border border-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] transition"
+                className="p-2 rounded-xl bg-[#1C2521] border border-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] transition cursor-pointer"
                 aria-label="إغلاق القائمة"
               >
                 <X className="w-5 h-5" />
@@ -267,18 +267,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      {/* Mobile Bottom Navigation Bar (RTL friendly, safe area padded) */}
+      {/* Mobile Bottom Navigation Bar without 'المزيد' button */}
       <nav
         aria-label="شريط التنقل السفلي للهواتف"
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#161D1A]/95 border-t border-[#26312C] backdrop-blur-lg px-2 pt-1 pb-safe flex items-center justify-around shadow-2xl"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#161D1A]/95 border-t border-[#26312C] backdrop-blur-lg px-4 pt-1.5 pb-safe flex items-center justify-around shadow-2xl"
       >
         {/* 1. Dashboard */}
         <button
           onClick={() => handleSelectTab('dashboard')}
-          className={`flex flex-col items-center justify-center p-2 rounded-xl transition cursor-pointer min-w-[56px] ${
+          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition cursor-pointer min-w-[64px] ${
             activeTab === 'dashboard' ? 'text-[#34C38F]' : 'text-[#8A9690] hover:text-[#E8EDEA]'
           }`}
-          title="لوحة التحكم"
+          title="الرئيسية"
         >
           <LayoutDashboard className="w-5 h-5" />
           <span className="text-[10px] mt-1 font-semibold">الرئيسية</span>
@@ -287,7 +287,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* 2. Beneficiaries */}
         <button
           onClick={() => handleSelectTab('beneficiaries')}
-          className={`flex flex-col items-center justify-center p-2 rounded-xl transition cursor-pointer min-w-[56px] ${
+          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition cursor-pointer min-w-[64px] ${
             activeTab === 'beneficiaries' ? 'text-[#34C38F]' : 'text-[#8A9690] hover:text-[#E8EDEA]'
           }`}
           title="المستفيدون"
@@ -299,7 +299,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* 3. Products */}
         <button
           onClick={() => handleSelectTab('products')}
-          className={`flex flex-col items-center justify-center p-2 rounded-xl transition cursor-pointer min-w-[56px] ${
+          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition cursor-pointer min-w-[64px] ${
             activeTab === 'products' ? 'text-[#34C38F]' : 'text-[#8A9690] hover:text-[#E8EDEA]'
           }`}
           title="السلع التموينية"
@@ -311,28 +311,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* 4. Delivery (Highlight action) */}
         <button
           onClick={() => handleSelectTab('delivery')}
-          className={`flex flex-col items-center justify-center p-2 rounded-xl transition cursor-pointer min-w-[56px] relative ${
+          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition cursor-pointer min-w-[64px] relative ${
             activeTab === 'delivery' ? 'text-[#34C38F]' : 'text-[#8A9690] hover:text-[#E8EDEA]'
           }`}
           title="صرف وتسليم"
         >
           <ShoppingBag className="w-5 h-5" />
           <span className="text-[10px] mt-1 font-semibold">الصرف</span>
-        </button>
-
-        {/* 5. More / All Tabs */}
-        <button
-          onClick={() => onOpenMobileDrawer && onOpenMobileDrawer()}
-          className={`flex flex-col items-center justify-center p-2 rounded-xl transition cursor-pointer min-w-[56px] relative ${
-            isSecondaryActive ? 'text-[#34C38F]' : 'text-[#8A9690] hover:text-[#E8EDEA]'
-          }`}
-          title="المزيد من الأقسام"
-        >
-          <Grid className="w-5 h-5" />
-          <span className="text-[10px] mt-1 font-semibold">المزيد</span>
-          {isSecondaryActive && (
-            <span className="absolute top-1.5 right-3 w-2 h-2 rounded-full bg-[#34C38F] ring-2 ring-[#161D1A]" />
-          )}
         </button>
       </nav>
     </>

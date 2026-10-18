@@ -87,6 +87,7 @@ export interface DeliveryRecord {
   totalPoints: number;
   balanceBefore: number;
   balanceAfter: number;
+  expired_points?: number;
   items: DeliveryItemRecord[];
   notes?: string;
   createdAt: string;

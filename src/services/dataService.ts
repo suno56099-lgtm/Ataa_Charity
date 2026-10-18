@@ -324,6 +324,54 @@ const INITIAL_CODES: MonthlyCode[] = [
   },
 ];
 
+const INITIAL_DELIVERIES: DeliveryRecord[] = [
+  {
+    id: 'del_1001',
+    codeId: 'c1',
+    deliveryCode: '482915',
+    beneficiaryId: 'b1',
+    beneficiaryName: 'فاطمة محمد السيد حسن',
+    beneficiaryPhone: '01014589231',
+    staffId: 'a2222222-2222-2222-2222-222222222222',
+    staffName: 'طارق حسام الدين',
+    totalPoints: 94,
+    balanceBefore: 120,
+    balanceAfter: 26,
+    expired_points: 26,
+    items: [
+      { id: 'di_1', deliveryId: 'del_1001', productId: 'prod_1', productName: 'زيت طعام خليط 800 مل', unitPoints: 12, quantity: 2, subtotalPoints: 24 },
+      { id: 'di_2', deliveryId: 'del_1001', productId: 'prod_2', productName: 'أرز مصري معبأ 1 كجم', unitPoints: 10, quantity: 3, subtotalPoints: 30 },
+      { id: 'di_3', deliveryId: 'del_1001', productId: 'prod_3', productName: 'سكر ناعم 1 كجم', unitPoints: 10, quantity: 2, subtotalPoints: 20 },
+      { id: 'di_4', deliveryId: 'del_1001', productId: 'prod_4', productName: 'مكرونة 400 جم', unitPoints: 4, quantity: 4, subtotalPoints: 16 },
+      { id: 'di_5', deliveryId: 'del_1001', productId: 'prod_5', productName: 'شاي ناعم 40 جم', unitPoints: 2, quantity: 2, subtotalPoints: 4 },
+    ],
+    notes: 'تسليم الحصة التموينية لشهر أكتوبر 2026 بمقر الجمعية',
+    createdAt: '2026-10-17T10:30:00Z',
+  },
+  {
+    id: 'del_1002',
+    codeId: 'c2',
+    deliveryCode: '739104',
+    beneficiaryId: 'b2',
+    beneficiaryName: 'محمود عبد الرحمن خليل',
+    beneficiaryPhone: '01128945671',
+    staffId: 'a2222222-2222-2222-2222-222222222222',
+    staffName: 'طارق حسام الدين',
+    totalPoints: 134,
+    balanceBefore: 141,
+    balanceAfter: 7,
+    expired_points: 7,
+    items: [
+      { id: 'di_6', deliveryId: 'del_1002', productId: 'prod_1', productName: 'زيت طعام خليط 800 مل', unitPoints: 12, quantity: 2, subtotalPoints: 24 },
+      { id: 'di_7', deliveryId: 'del_1002', productId: 'prod_7', productName: 'لحم بقري بلدي مفروم 500 جم', unitPoints: 25, quantity: 2, subtotalPoints: 50 },
+      { id: 'di_8', deliveryId: 'del_1002', productId: 'prod_2', productName: 'أرز مصري معبأ 1 كجم', unitPoints: 10, quantity: 4, subtotalPoints: 40 },
+      { id: 'di_9', deliveryId: 'del_1002', productId: 'prod_3', productName: 'سكر ناعم 1 كجم', unitPoints: 10, quantity: 2, subtotalPoints: 20 },
+    ],
+    notes: 'تسليم حصة الأسرة لشهر أكتوبر 2026',
+    createdAt: '2026-10-17T14:15:00Z',
+  },
+];
+
 const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
   {
     id: 'l1',
@@ -379,8 +427,9 @@ class DataService {
     if (!localStorage.getItem(STORAGE_KEYS.MONTHLY_CODES)) {
       this.setStorage(STORAGE_KEYS.MONTHLY_CODES, INITIAL_CODES);
     }
-    if (!localStorage.getItem(STORAGE_KEYS.DELIVERIES)) {
-      this.setStorage(STORAGE_KEYS.DELIVERIES, []);
+    const currentDeliveries = this.getStorage<DeliveryRecord[]>(STORAGE_KEYS.DELIVERIES, []);
+    if (!currentDeliveries || currentDeliveries.length === 0) {
+      this.setStorage(STORAGE_KEYS.DELIVERIES, INITIAL_DELIVERIES);
     }
     if (!localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS)) {
       this.setStorage(STORAGE_KEYS.AUDIT_LOGS, INITIAL_AUDIT_LOGS);
@@ -956,10 +1005,21 @@ class DataService {
   }
 
   generateCodesForMonth(monthKey: string): { success: boolean; createdCount: number; error?: string } {
-    const beneficiaries = this.getBeneficiaries().filter((b) => b.isActive);
+    const beneficiaries = this.getBeneficiaries();
+    const activeBeneficiaries = beneficiaries.filter((b) => b.isActive);
     const existingCodes = this.getStorage<MonthlyCode[]>(STORAGE_KEYS.MONTHLY_CODES, INITIAL_CODES);
+    const tiers = this.getPointsTiers();
 
-    // Existing codes for this month
+    // 1. Each new month, available points are set fresh from points table based on family size (do not add previous balance)
+    for (const ben of beneficiaries) {
+      if (ben.isActive) {
+        ben.pointsBalance = calculateFamilyPoints(ben.familySize, tiers);
+        ben.updatedAt = new Date().toISOString();
+      }
+    }
+    this.setStorage(STORAGE_KEYS.BENEFICIARIES, beneficiaries);
+
+    // 2. Existing codes for this month
     const existingMonthBeneficiaryIds = new Set(
       existingCodes.filter((c) => c.monthKey === monthKey).map((c) => c.beneficiaryId)
     );
@@ -969,7 +1029,7 @@ class DataService {
     let createdCount = 0;
     const newCodes: MonthlyCode[] = [];
 
-    for (const ben of beneficiaries) {
+    for (const ben of activeBeneficiaries) {
       if (existingMonthBeneficiaryIds.has(ben.id)) {
         continue;
       }
@@ -1008,7 +1068,7 @@ class DataService {
         actorName: current.fullName,
         actorRole: current.role,
         targetName: `أكواد شهر ${formatMonthArabic(monthKey)}`,
-        details: `توليد ${createdCount} كود جديد لشهر ${formatMonthArabic(monthKey)} لجميع المستفيدين غير المسجل لهم كود للشهر`,
+        details: `توليد ${createdCount} كود جديد لشهر ${formatMonthArabic(monthKey)} وتحديث أرصدة المستفيدين طازجة حسب عدد أفراد الأسرة دون ترحيل الرصيد السابق`,
       });
     }
 
@@ -1099,6 +1159,7 @@ class DataService {
       subtotalPoints: item.pointsCost * item.quantity,
     }));
 
+    const expired_points = balanceAfter;
     const deliveryRecord: DeliveryRecord = {
       id: deliveryId,
       codeId: codeRecord.id,
@@ -1111,16 +1172,17 @@ class DataService {
       totalPoints,
       balanceBefore,
       balanceAfter,
+      expired_points,
       items: deliveryItems,
       notes: params.notes,
       createdAt: new Date().toISOString(),
     };
 
-    // 3. Atomically update Beneficiary Balance
+    // 3. Atomically update Beneficiary Balance (leftover points expire and do not carry over)
     const beneficiariesList = this.getBeneficiaries();
     const benIndex = beneficiariesList.findIndex((b) => b.id === beneficiary.id);
     if (benIndex !== -1) {
-      beneficiariesList[benIndex].pointsBalance = balanceAfter;
+      beneficiariesList[benIndex].pointsBalance = 0;
       beneficiariesList[benIndex].updatedAt = new Date().toISOString();
       this.setStorage(STORAGE_KEYS.BENEFICIARIES, beneficiariesList);
     }
@@ -1166,7 +1228,11 @@ class DataService {
     beneficiaryId?: string;
     searchQuery?: string;
   }): DeliveryRecord[] {
-    let list = this.getStorage<DeliveryRecord[]>(STORAGE_KEYS.DELIVERIES, []);
+    let list = this.getStorage<DeliveryRecord[]>(STORAGE_KEYS.DELIVERIES, INITIAL_DELIVERIES);
+    if (!list || list.length === 0) {
+      list = INITIAL_DELIVERIES;
+      this.setStorage(STORAGE_KEYS.DELIVERIES, list);
+    }
     if (filters?.staffId) {
       list = list.filter((d) => d.staffId === filters.staffId);
     }
