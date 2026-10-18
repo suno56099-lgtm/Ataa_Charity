@@ -17,6 +17,7 @@ import { DeliveryView } from './components/DeliveryView.tsx';
 import { MonthlyCodesView } from './components/MonthlyCodesView.tsx';
 import { LogsView } from './components/LogsView.tsx';
 import { StaffView } from './components/StaffView.tsx';
+import { PointsCalculatorView } from './components/PointsCalculatorView.tsx';
 
 // Inactivity session timeout: 15 minutes (900 seconds)
 const INACTIVITY_TIMEOUT_SECONDS = 900;
@@ -27,6 +28,7 @@ export default function App() {
   );
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Inactivity Timer
@@ -103,6 +105,7 @@ export default function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
         inactivitySecondsRemaining={inactivitySecondsRemaining}
+        onOpenMobileMenu={() => setIsMobileDrawerOpen(true)}
       />
 
       {/* Main Body Layout: Sidebar + Content */}
@@ -114,10 +117,13 @@ export default function App() {
           userRole={currentUser.role}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          isMobileDrawerOpen={isMobileDrawerOpen}
+          onCloseMobileDrawer={() => setIsMobileDrawerOpen(false)}
+          onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)}
         />
 
-        {/* Dynamic Main Workspace */}
-        <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6 pb-24 md:pb-8 max-w-7xl mx-auto w-full">
+        {/* Dynamic Main Workspace with Responsive Padding for Mobile/Tablet/Desktop */}
+        <main className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3.5 sm:py-5 md:py-6 pb-28 md:pb-8 max-w-7xl mx-auto w-full">
           {activeTab === 'dashboard' && (
             <DashboardView
               metrics={metrics}
@@ -147,6 +153,13 @@ export default function App() {
           )}
 
           {activeTab === 'codes' && <MonthlyCodesView onRefresh={handleRefresh} />}
+
+          {activeTab === 'calculator' && (
+            <PointsCalculatorView
+              isAdmin={currentUser.role === 'admin'}
+              onRefresh={handleRefresh}
+            />
+          )}
 
           {activeTab === 'logs' && (
             <LogsView deliveries={recentDeliveries} auditLogs={auditLogs} />

@@ -53,24 +53,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Quick Launch Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-2.5 w-full md:w-auto">
           <button
             onClick={() => onNavigate('delivery')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#34C38F] text-[#0F1412] font-bold text-sm shadow-md hover:bg-[#2bb27f] active:scale-95 transition"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#34C38F] text-[#0F1412] font-bold text-sm shadow-md hover:bg-[#2bb27f] active:scale-95 transition cursor-pointer"
           >
             <ShoppingBag className="w-4 h-4" />
             <span>صرف وتسليم فوري</span>
           </button>
           <button
             onClick={() => onNavigate('codes')}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#1C2521] border border-[#26312C] text-[#E8EDEA] hover:bg-[#26312C] font-semibold text-sm transition"
+            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#1C2521] border border-[#26312C] text-[#E8EDEA] hover:bg-[#26312C] font-semibold text-sm transition cursor-pointer"
           >
             <KeyRound className="w-4 h-4 text-[#E0B35A]" />
             <span>إدارة الأكواد الشهرية</span>
           </button>
           <button
             onClick={() => onNavigate('beneficiaries')}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#1C2521] border border-[#26312C] text-[#E8EDEA] hover:bg-[#26312C] font-semibold text-sm transition"
+            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#1C2521] border border-[#26312C] text-[#E8EDEA] hover:bg-[#26312C] font-semibold text-sm transition cursor-pointer"
           >
             <Users className="w-4 h-4 text-[#34C38F]" />
             <span>إضافة مستفيد جديد</span>
@@ -335,45 +335,85 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-xs">
-              <thead>
-                <tr className="border-b border-[#26312C] text-[#8A9690]">
-                  <th className="pb-3 pr-2">كود الصرف</th>
-                  <th className="pb-3">اسم المستفيد</th>
-                  <th className="pb-3">مسؤول الصرف</th>
-                  <th className="pb-3">الأصناف المصروفة</th>
-                  <th className="pb-3">إجمالي النقاط</th>
-                  <th className="pb-3">الرصيد المتبقي</th>
-                  <th className="pb-3 pl-2">الوقت</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#26312C]">
-                {recentDeliveries.slice(0, 5).map((del) => (
-                  <tr key={del.id} className="hover:bg-[#1C2521] transition">
-                    <td className="py-3 pr-2 font-mono font-bold text-[#E0B35A]">
+          <>
+            {/* Mobile Cards (< 768px) */}
+            <div className="md:hidden space-y-2.5">
+              {recentDeliveries.slice(0, 5).map((del) => (
+                <div
+                  key={del.id}
+                  className="p-3.5 rounded-xl bg-[#1C2521] border border-[#26312C] space-y-2 text-xs"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-bold text-[#E8EDEA]">{del.beneficiaryName}</div>
+                      <div className="text-[10px] text-[#8A9690]">
+                        {del.staffName} • {new Intl.DateTimeFormat('ar-EG', { hour: 'numeric', minute: 'numeric' }).format(new Date(del.createdAt))}
+                      </div>
+                    </div>
+                    <span className="font-mono font-bold text-xs text-[#E0B35A] px-2 py-0.5 rounded-lg bg-[#161D1A] border border-[#26312C]">
                       {del.deliveryCode}
-                    </td>
-                    <td className="py-3 font-semibold text-[#E8EDEA]">{del.beneficiaryName}</td>
-                    <td className="py-3 text-[#8A9690]">{del.staffName}</td>
-                    <td className="py-3 text-[#8A9690]">
-                      {del.items.map((i) => `${i.productName} (×${i.quantity})`).join('، ')}
-                    </td>
-                    <td className="py-3 font-bold text-[#34C38F]">
-                      {del.totalPoints} نقطة
-                    </td>
-                    <td className="py-3 text-[#8A9690]">{del.balanceAfter} نقطة</td>
-                    <td className="py-3 pl-2 text-[#8A9690]">
-                      {new Intl.DateTimeFormat('ar-EG', {
-                        hour: 'numeric',
-                        minute: 'numeric',
-                      }).format(new Date(del.createdAt))}
-                    </td>
+                    </span>
+                  </div>
+
+                  <div className="text-[11px] text-[#8A9690] bg-[#161D1A] p-2 rounded-lg border border-[#26312C]">
+                    {del.items.map((i) => `${i.productName} (×${i.quantity})`).join('، ')}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 text-[11px]">
+                    <div>
+                      <span>النقاط: </span>
+                      <strong className="text-[#34C38F]">{del.totalPoints} نقطة</strong>
+                    </div>
+                    <div>
+                      <span>المتبقي: </span>
+                      <strong className="text-[#E0B35A]">{del.balanceAfter} نقطة</strong>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop & Tablet Table (>= 768px) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-right text-xs min-w-[600px]">
+                <thead>
+                  <tr className="border-b border-[#26312C] text-[#8A9690]">
+                    <th className="pb-3 pr-2">كود الصرف</th>
+                    <th className="pb-3">اسم المستفيد</th>
+                    <th className="pb-3">مسؤول الصرف</th>
+                    <th className="pb-3">الأصناف المصروفة</th>
+                    <th className="pb-3">إجمالي النقاط</th>
+                    <th className="pb-3">الرصيد المتبقي</th>
+                    <th className="pb-3 pl-2">الوقت</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-[#26312C]">
+                  {recentDeliveries.slice(0, 5).map((del) => (
+                    <tr key={del.id} className="hover:bg-[#1C2521] transition">
+                      <td className="py-3 pr-2 font-mono font-bold text-[#E0B35A]">
+                        {del.deliveryCode}
+                      </td>
+                      <td className="py-3 font-semibold text-[#E8EDEA]">{del.beneficiaryName}</td>
+                      <td className="py-3 text-[#8A9690]">{del.staffName}</td>
+                      <td className="py-3 text-[#8A9690]">
+                        {del.items.map((i) => `${i.productName} (×${i.quantity})`).join('، ')}
+                      </td>
+                      <td className="py-3 font-bold text-[#34C38F]">
+                        {del.totalPoints} نقطة
+                      </td>
+                      <td className="py-3 text-[#8A9690]">{del.balanceAfter} نقطة</td>
+                      <td className="py-3 pl-2 text-[#8A9690]">
+                        {new Intl.DateTimeFormat('ar-EG', {
+                          hour: 'numeric',
+                          minute: 'numeric',
+                        }).format(new Date(del.createdAt))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Product, Beneficiary, MonthlyCode, DeliveryRecord, StaffAccount } from '../types/index.ts';
 import { dataService } from '../services/dataService.ts';
-import { CartItem } from '../utils/deliveryRules.ts';
+import { CartItem, checkLeftoverPointsWarning } from '../utils/deliveryRules.ts';
 import { maskNationalId } from '../utils/egyptianValidation.ts';
 
 interface DeliveryViewProps {
@@ -45,6 +45,7 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showLeftoverModal, setShowLeftoverModal] = useState(false);
 
   // Completed Delivery
   const [completedDelivery, setCompletedDelivery] = useState<DeliveryRecord | null>(null);
@@ -110,27 +111,22 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
     return found ? found.quantity : 0;
   };
 
-  // Cart Totals
+  // Cart Totals & Leftover calculation
   const totalCartPoints = cart.reduce((sum, item) => sum + item.pointsCost * item.quantity, 0);
   const totalCartUnits = cart.reduce((sum, item) => sum + item.quantity, 0);
   const currentBalance = verifiedBeneficiary?.pointsBalance || 0;
   const balanceAfter = currentBalance - totalCartPoints;
   const isBalanceInsufficient = totalCartPoints > currentBalance;
 
-  // Confirm Atomic Delivery
-  const handleConfirmDelivery = async () => {
-    if (!verifiedBeneficiary || !verifiedCodeRecord || !currentUser) return;
-    if (cart.length === 0 || totalCartPoints === 0) {
-      setSubmitError('يرجى اختيار صنف تمويني واحد على الأقل قبل التأكيد');
-      return;
-    }
-    if (isBalanceInsufficient) {
-      setSubmitError('رصيد المستفيد غير كافٍ لإتمام عملية الصرف الحالية');
-      return;
-    }
+  // Leftover points warning check
+  const leftoverWarning = checkLeftoverPointsWarning(balanceAfter, products);
 
+  // Execute Atomic Delivery
+  const executeDelivery = async () => {
+    if (!verifiedBeneficiary || !verifiedCodeRecord || !currentUser) return;
     setIsSubmitting(true);
     setSubmitError(null);
+    setShowLeftoverModal(false);
 
     try {
       const result = await dataService.processCharityDeliveryAtomic({
@@ -156,6 +152,27 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Confirm Atomic Delivery (warns staff if leftover points exist)
+  const handleConfirmDelivery = () => {
+    if (!verifiedBeneficiary || !verifiedCodeRecord || !currentUser) return;
+    if (cart.length === 0 || totalCartPoints === 0) {
+      setSubmitError('يرجى اختيار صنف تمويني واحد على الأقل قبل التأكيد');
+      return;
+    }
+    if (isBalanceInsufficient) {
+      setSubmitError('رصيد المستفيد غير كافٍ لإتمام عملية الصرف الحالية');
+      return;
+    }
+
+    // Warn staff before confirming if leftover points are sufficient for cheapest product
+    if (leftoverWarning.hasExcessLeftover) {
+      setShowLeftoverModal(true);
+      return;
+    }
+
+    executeDelivery();
   };
 
   // Reset for Next Delivery
@@ -204,10 +221,13 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
             </div>
           )}
 
-          {/* 6-Digit Code Input Box */}
+          {/* 6-Digit Code Input Box with numeric keypad optimization */}
           <div className="space-y-3">
             <input
               type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="one-time-code"
               maxLength={6}
               value={inputCode}
               onChange={(e) => setInputCode(e.target.value.replace(/\D/g, ''))}
@@ -215,13 +235,13 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
                 if (e.key === 'Enter') handleVerify();
               }}
               placeholder="0 0 0 0 0 0"
-              className="w-full max-w-xs mx-auto text-center font-mono text-3xl font-extrabold tracking-[0.5em] px-4 py-3 rounded-2xl bg-[#1C2521] border-2 border-[#26312C] focus:border-[#34C38F] text-[#E0B35A] focus:outline-none shadow-inner"
+              className="w-full max-w-xs mx-auto text-center font-mono text-2xl sm:text-3xl font-extrabold tracking-[0.4em] sm:tracking-[0.5em] px-4 py-3 rounded-2xl bg-[#1C2521] border-2 border-[#26312C] focus:border-[#34C38F] text-[#E0B35A] focus:outline-none shadow-inner"
             />
 
             <div>
               <button
                 onClick={() => handleVerify()}
-                className="w-full max-w-xs mx-auto flex items-center justify-center gap-2 py-3 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] text-[#0F1412] font-bold text-sm shadow-lg transition active:scale-95"
+                className="w-full max-w-xs mx-auto flex items-center justify-center gap-2 py-3 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] text-[#0F1412] font-bold text-sm shadow-lg transition active:scale-95 cursor-pointer"
               >
                 <span>التحقق من الكود والمستفيد</span>
                 <ArrowRight className="w-4 h-4 rotate-180" />
@@ -386,7 +406,7 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
             </div>
 
             {/* Live Basket Summary & Confirmation (4 cols) */}
-            <div className="lg:col-span-4 rounded-2xl bg-[#161D1A] border border-[#26312C] p-5 shadow-sm space-y-4 sticky top-20">
+            <div id="basket-summary" className="lg:col-span-4 rounded-2xl bg-[#161D1A] border border-[#26312C] p-4 sm:p-5 shadow-sm space-y-4 sticky top-20">
               <div className="flex items-center justify-between pb-3 border-b border-[#26312C]">
                 <div className="flex items-center gap-2">
                   <ShoppingBag className="w-4 h-4 text-[#34C38F]" />
@@ -437,13 +457,30 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
                   }`}
                 >
                   <span>الرصيد بعد الصرف:</span>
-                  <span className="text-sm">{balanceAfter} نقطة</span>
+                  <span className="text-sm font-extrabold">{balanceAfter} نقطة</span>
                 </div>
               </div>
 
+              {/* Insufficient balance error */}
               {isBalanceInsufficient && (
                 <div className="p-2.5 rounded-xl bg-[#F0707A]/15 border border-[#F0707A]/30 text-[#F0707A] text-[11px] leading-relaxed">
                   تنبيه: إجمالي النقاط المطلوبة يتجاوز رصيد المستفيد. يرجى تقليل بعض الأصناف.
+                </div>
+              )}
+
+              {/* Leftover Points Warning */}
+              {leftoverWarning.hasExcessLeftover && cart.length > 0 && !isBalanceInsufficient && (
+                <div className="p-3 rounded-xl bg-[#E0B35A]/15 border border-[#E0B35A]/40 text-[#E0B35A] text-[11px] leading-relaxed space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <AlertTriangle className="w-4 h-4 text-[#E0B35A] flex-shrink-0" />
+                    <span>تنبيه لمنع تبقي نقاط:</span>
+                  </div>
+                  <p className="text-[10px] text-[#E8EDEA]/90 leading-normal">
+                    الرصيد المتبقي بعد الصرف ({balanceAfter} نقطة) يكفي لصرف سلعة إضافية (أرخص سلعة: {leftoverWarning.cheapestProduct?.name} بتكلفة {leftoverWarning.cheapestProduct?.pointsCost} نقطة).
+                  </p>
+                  <p className="text-[10px] text-[#E0B35A] font-semibold">
+                    يرجى توجيه المستفيد لاختيار سلع إضافية للاستفادة الكاملة من نقاط دعمه.
+                  </p>
                 </div>
               )}
 
@@ -457,16 +494,16 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
                   value={deliveryNotes}
                   onChange={(e) => setDeliveryNotes(e.target.value)}
                   placeholder="ملاحظات التسليم الميداني..."
-                  className="w-full bg-[#1C2521] border border-[#26312C] rounded-xl px-3 py-2 text-xs text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
+                  className="w-full bg-[#1C2521] border border-[#26312C] rounded-xl px-3 py-2 text-xs sm:text-sm text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
                 />
               </div>
 
               {/* Action Buttons */}
               <div className="space-y-2 pt-2">
                 <button
-                  onClick={handleConfirmDelivery}
+                  onClick={() => handleConfirmDelivery()}
                   disabled={cart.length === 0 || isBalanceInsufficient || isSubmitting}
-                  className="w-full py-3 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] disabled:opacity-40 disabled:hover:bg-[#34C38F] text-[#0F1412] font-bold text-sm shadow-md transition active:scale-95 flex items-center justify-center gap-2"
+                  className="w-full py-3 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] disabled:opacity-40 disabled:hover:bg-[#34C38F] text-[#0F1412] font-bold text-sm shadow-md transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isSubmitting ? (
                     <span>جارٍ معالجة الصرف الذري...</span>
@@ -481,13 +518,102 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="w-full py-2 rounded-xl bg-[#1C2521] hover:bg-[#26312C] text-[#8A9690] text-xs font-semibold transition"
+                  className="w-full py-2.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] text-[#8A9690] text-xs font-semibold transition cursor-pointer"
                 >
                   إلغاء والعودة
                 </button>
               </div>
             </div>
           </div>
+
+          {/* Floating Mobile Cart Bar (for phones and tablets < lg when cart has items) */}
+          {cart.length > 0 && (
+            <div className="lg:hidden fixed bottom-16 left-3 right-3 z-30 bg-[#161D1A]/95 border border-[#34C38F]/50 backdrop-blur-md rounded-2xl p-3 shadow-2xl flex items-center justify-between animate-fade-in">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#34C38F]/20 text-[#34C38F] flex items-center justify-center font-bold text-xs">
+                  {totalCartUnits}
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-[#E8EDEA]">
+                    {totalCartPoints} نقطة
+                    <span className="text-[10px] text-[#8A9690] mr-1.5 font-normal">
+                      (المتبقي: {balanceAfter}ن)
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-[#34C38F]">
+                    {isBalanceInsufficient ? 'تجاوز الرصيد المتاح!' : 'جاهز لإتمام الصرف'}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  const el = document.getElementById('basket-summary');
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+                className="flex items-center gap-1 px-3 py-2 rounded-xl bg-[#34C38F] text-[#0F1412] font-bold text-xs shadow-md active:scale-95 transition cursor-pointer"
+              >
+                <span>مراجعة وتأكيد</span>
+                <ArrowRight className="w-3.5 h-3.5 rotate-90" />
+              </button>
+            </div>
+          )}
+
+          {/* Leftover Points Confirmation Modal */}
+          {showLeftoverModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 animate-fade-in">
+              <div className="w-full max-w-md rounded-2xl bg-[#161D1A] border border-[#E0B35A]/50 p-6 shadow-2xl text-[#E8EDEA] space-y-4">
+                <div className="flex items-center gap-3 pb-3 border-b border-[#26312C]">
+                  <div className="w-10 h-10 rounded-xl bg-[#E0B35A]/20 text-[#E0B35A] flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-[#E8EDEA]">
+                      تنبيه هام: تبقي نقاط غير مستغلة!
+                    </h3>
+                    <span className="text-[11px] text-[#8A9690]">
+                      تحذير الموظف لتفادي ضياع نقاط المستفيد
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-xs leading-relaxed text-[#8A9690] bg-[#1C2521] p-3.5 rounded-xl border border-[#26312C]">
+                  <p className="text-[#E8EDEA] font-semibold">
+                    الرصيد المتبقي للمستفيد بعد هذه السلة هو{' '}
+                    <span className="text-[#E0B35A] font-extrabold text-sm">{balanceAfter} نقطة</span>.
+                  </p>
+                  <p>
+                    هذا الرصيد يكفي لصرف سلع إضافية مثل:
+                    <span className="text-[#34C38F] font-bold mr-1">
+                      {leftoverWarning.cheapestProduct?.name} ({leftoverWarning.cheapestProduct?.pointsCost} نقطة)
+                    </span>.
+                  </p>
+                  <p className="text-[11px] text-[#E0B35A]">
+                    هل تود التوقف وإرشاد المستفيد لاختيار سلع إضافية، أم ترغب في المتابعة وتأكيد الصرف الآن؟
+                  </p>
+                </div>
+
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowLeftoverModal(false)}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] text-[#0F1412] font-bold text-xs transition cursor-pointer"
+                  >
+                    العودة لاختيار سلع إضافية
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => executeDelivery()}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] text-xs font-semibold transition cursor-pointer"
+                  >
+                    متابعة الصرف على أي حال
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

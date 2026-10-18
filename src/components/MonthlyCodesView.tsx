@@ -194,96 +194,173 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-xs">
-              <thead>
-                <tr className="border-b border-[#26312C] text-[#8A9690]">
-                  <th className="pb-3 pr-2">اسم المستفيد</th>
-                  <th className="pb-3">رقم الهاتف المحمول</th>
-                  <th className="pb-3">كود الاستلام (6 أرقام)</th>
-                  <th className="pb-3">حالة الصرف</th>
-                  <th className="pb-3">تاريخ ووقت الصرف</th>
-                  <th className="pb-3 text-center pl-2">إجراءات الإرسال</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#26312C]">
-                {codes.map((c) => {
-                  const isUsed = c.status === 'used';
-                  const isCopied = copiedCodeId === c.id;
-                  const { smsUrl } = buildSmsLink(c.beneficiaryPhone, c.code, c.monthKey);
+          <>
+            {/* Mobile Cards for Phones (< 768px) */}
+            <div className="md:hidden space-y-3">
+              {codes.map((c) => {
+                const isUsed = c.status === 'used';
+                const isCopied = copiedCodeId === c.id;
+                const { smsUrl } = buildSmsLink(c.beneficiaryPhone, c.code, c.monthKey);
 
-                  return (
-                    <tr key={c.id} className="hover:bg-[#1C2521] transition">
-                      {/* Beneficiary */}
-                      <td className="py-3 pr-2 font-semibold text-[#E8EDEA]">
-                        {c.beneficiaryName}
-                      </td>
-
-                      {/* Phone */}
-                      <td className="py-3 font-mono text-xs text-[#8A9690]">{c.beneficiaryPhone}</td>
-
-                      {/* 6-Digit Code */}
-                      <td className="py-3">
-                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[#1C2521] border border-[#26312C]">
-                          <span className="font-mono font-extrabold text-sm tracking-wider text-[#E0B35A]">
-                            {c.code}
-                          </span>
-                          <button
-                            onClick={() => handleCopyCode(c.id, c.code)}
-                            className="p-1 rounded hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] transition"
-                            title="نسخ الكود"
-                            aria-label={`نسخ كود ${c.beneficiaryName}`}
-                          >
-                            {isCopied ? (
-                              <Check className="w-3.5 h-3.5 text-[#34C38F]" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-
-                      {/* Status */}
-                      <td className="py-3">
+                return (
+                  <div
+                    key={c.id}
+                    className="p-4 rounded-xl bg-[#1C2521] border border-[#26312C] space-y-3 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="font-bold text-sm text-[#E8EDEA]">{c.beneficiaryName}</h3>
+                        <div className="font-mono text-xs text-[#8A9690] mt-0.5">{c.beneficiaryPhone}</div>
+                      </div>
+                      <div>
                         {isUsed ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#34C38F]/15 text-[#34C38F] font-bold text-[11px] border border-[#34C38F]/30">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#34C38F]/15 text-[#34C38F] font-bold text-[10px] border border-[#34C38F]/30">
                             <CheckCircle2 className="w-3 h-3" />
                             <span>تم الصرف</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#E0B35A]/15 text-[#E0B35A] font-semibold text-[11px] border border-[#E0B35A]/30">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#E0B35A]/15 text-[#E0B35A] font-semibold text-[10px] border border-[#E0B35A]/30">
                             <span>متاح للصرف</span>
                           </span>
                         )}
-                      </td>
+                      </div>
+                    </div>
 
-                      {/* Used Info */}
-                      <td className="py-3 text-[#8A9690]">
-                        {c.usedAt
-                          ? new Intl.DateTimeFormat('ar-EG', {
-                              dateStyle: 'short',
-                              timeStyle: 'short',
-                            }).format(new Date(c.usedAt))
-                          : '—'}
-                      </td>
+                    {/* 6-Digit Code & Actions */}
+                    <div className="flex items-center justify-between pt-2 border-t border-[#26312C] gap-2">
+                      <div className="flex items-center gap-2 bg-[#161D1A] px-3 py-1.5 rounded-xl border border-[#26312C]">
+                        <span className="text-[10px] text-[#8A9690]">الكود:</span>
+                        <span className="font-mono font-extrabold text-base tracking-widest text-[#E0B35A]">
+                          {c.code}
+                        </span>
+                      </div>
 
-                      {/* SMS Action */}
-                      <td className="py-3 pl-2 text-center">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleCopyCode(c.id, c.code)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#161D1A] hover:bg-[#26312C] border border-[#26312C] text-xs text-[#E8EDEA] transition cursor-pointer"
+                          title="نسخ الكود"
+                        >
+                          {isCopied ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-[#34C38F]" />
+                              <span className="text-[#34C38F] text-[11px]">تم</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5 text-[#8A9690]" />
+                              <span className="text-[11px]">نسخ</span>
+                            </>
+                          )}
+                        </button>
+
                         <a
                           href={smsUrl}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-xs font-semibold text-[#E8EDEA] transition"
-                          title="فتح تطبيق الرسائل وإرسال الكود"
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#34C38F]/15 hover:bg-[#34C38F]/25 border border-[#34C38F]/30 text-[#34C38F] text-xs font-semibold transition"
+                          title="إرسال رسالة SMS"
                         >
-                          <MessageSquare className="w-3.5 h-3.5 text-[#34C38F]" />
-                          <span>إرسال SMS</span>
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span className="text-[11px]">SMS</span>
                         </a>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop & Tablet Table (>= 768px) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-right text-xs min-w-[640px]">
+                <thead>
+                  <tr className="border-b border-[#26312C] text-[#8A9690]">
+                    <th className="pb-3 pr-2">اسم المستفيد</th>
+                    <th className="pb-3">رقم الهاتف المحمول</th>
+                    <th className="pb-3">كود الاستلام (6 أرقام)</th>
+                    <th className="pb-3">حالة الصرف</th>
+                    <th className="pb-3">تاريخ ووقت الصرف</th>
+                    <th className="pb-3 text-center pl-2">إجراءات الإرسال</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#26312C]">
+                  {codes.map((c) => {
+                    const isUsed = c.status === 'used';
+                    const isCopied = copiedCodeId === c.id;
+                    const { smsUrl } = buildSmsLink(c.beneficiaryPhone, c.code, c.monthKey);
+
+                    return (
+                      <tr key={c.id} className="hover:bg-[#1C2521] transition">
+                        {/* Beneficiary */}
+                        <td className="py-3 pr-2 font-semibold text-[#E8EDEA]">
+                          {c.beneficiaryName}
+                        </td>
+
+                        {/* Phone */}
+                        <td className="py-3 font-mono text-xs text-[#8A9690]">{c.beneficiaryPhone}</td>
+
+                        {/* 6-Digit Code */}
+                        <td className="py-3">
+                          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[#1C2521] border border-[#26312C]">
+                            <span className="font-mono font-extrabold text-sm tracking-wider text-[#E0B35A]">
+                              {c.code}
+                            </span>
+                            <button
+                              onClick={() => handleCopyCode(c.id, c.code)}
+                              className="p-1 rounded hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] transition cursor-pointer"
+                              title="نسخ الكود"
+                              aria-label={`نسخ كود ${c.beneficiaryName}`}
+                            >
+                              {isCopied ? (
+                                <Check className="w-3.5 h-3.5 text-[#34C38F]" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-3">
+                          {isUsed ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#34C38F]/15 text-[#34C38F] font-bold text-[11px] border border-[#34C38F]/30">
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>تم الصرف</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#E0B35A]/15 text-[#E0B35A] font-semibold text-[11px] border border-[#E0B35A]/30">
+                              <span>متاح للصرف</span>
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Used Info */}
+                        <td className="py-3 text-[#8A9690]">
+                          {c.usedAt
+                            ? new Intl.DateTimeFormat('ar-EG', {
+                                dateStyle: 'short',
+                                timeStyle: 'short',
+                              }).format(new Date(c.usedAt))
+                            : '—'}
+                        </td>
+
+                        {/* SMS Action */}
+                        <td className="py-3 pl-2 text-center">
+                          <a
+                            href={smsUrl}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-xs font-semibold text-[#E8EDEA] transition"
+                            title="فتح تطبيق الرسائل وإرسال الكود"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5 text-[#34C38F]" />
+                            <span>إرسال SMS</span>
+                          </a>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

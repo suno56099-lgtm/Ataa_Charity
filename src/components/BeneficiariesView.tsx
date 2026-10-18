@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   Phone,
   ShieldAlert,
+  Calculator,
 } from 'lucide-react';
 import { Beneficiary } from '../types/index.ts';
 import { dataService } from '../services/dataService.ts';
@@ -20,6 +21,7 @@ import {
   validateEgyptianPhone,
   maskNationalId,
 } from '../utils/egyptianValidation.ts';
+import { calculateFamilyPoints } from '../utils/deliveryRules.ts';
 
 interface BeneficiariesViewProps {
   beneficiaries: Beneficiary[];
@@ -88,13 +90,17 @@ export const BeneficiariesView: React.FC<BeneficiariesViewProps> = ({
 
   // Open Add Modal
   const openAddModal = () => {
+    const defaultFamilySize = 4;
+    const tiers = dataService.getPointsTiers();
+    const autoPoints = calculateFamilyPoints(defaultFamilySize, tiers);
+
     setFormData({
       nationalId: '',
       fullName: '',
       phone: '',
       address: '',
-      familySize: 4,
-      pointsBalance: 120,
+      familySize: defaultFamilySize,
+      pointsBalance: autoPoints,
       notes: '',
     });
     setFormError(null);
@@ -105,13 +111,17 @@ export const BeneficiariesView: React.FC<BeneficiariesViewProps> = ({
 
   // Open Edit Modal
   const openEditModal = (b: Beneficiary) => {
+    const cleanFamilySize = Math.max(1, Math.min(7, b.familySize || 1));
+    const tiers = dataService.getPointsTiers();
+    const autoPoints = calculateFamilyPoints(cleanFamilySize, tiers);
+
     setFormData({
       nationalId: b.nationalId,
       fullName: b.fullName,
       phone: b.phone,
       address: b.address || '',
-      familySize: b.familySize,
-      pointsBalance: b.pointsBalance,
+      familySize: cleanFamilySize,
+      pointsBalance: autoPoints,
       notes: b.notes || '',
     });
     setFormError(null);
@@ -144,20 +154,30 @@ export const BeneficiariesView: React.FC<BeneficiariesViewProps> = ({
       return;
     }
 
+    const cleanFamilySize = Math.max(1, Math.min(7, Math.floor(formData.familySize || 1)));
+    const tiers = dataService.getPointsTiers();
+    const cleanPoints = calculateFamilyPoints(cleanFamilySize, tiers);
+
+    const submissionData = {
+      ...formData,
+      familySize: cleanFamilySize,
+      pointsBalance: cleanPoints,
+    };
+
     if (editingBeneficiary) {
-      const res = dataService.updateBeneficiary(editingBeneficiary.id, formData);
+      const res = dataService.updateBeneficiary(editingBeneficiary.id, submissionData);
       if (!res.success) {
         setFormError(res.error || 'فشل التحديث');
         return;
       }
-      setFormSuccess('تم تحديث بيانات المستفيد بنجاح');
+      setFormSuccess('تم تحديث بيانات المستفيد واحتساب النقاط بنجاح');
     } else {
-      const res = dataService.addBeneficiary(formData);
+      const res = dataService.addBeneficiary(submissionData);
       if (!res.success) {
         setFormError(res.error || 'فشل التسجيل');
         return;
       }
-      setFormSuccess('تم تسجيل المستفيد الجديد بنجاح');
+      setFormSuccess('تم تسجيل المستفيد واحتساب نقاط الأسرة بنجاح');
     }
 
     setTimeout(() => {
@@ -248,115 +268,239 @@ export const BeneficiariesView: React.FC<BeneficiariesViewProps> = ({
             <p className="text-sm">لم يتم العثور على أي مستفيد يطابق معايير البحث.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-xs">
-              <thead>
-                <tr className="border-b border-[#26312C] text-[#8A9690]">
-                  <th className="pb-3 pr-2">اسم المستفيد</th>
-                  <th className="pb-3">الرقم القومي (محمي)</th>
-                  <th className="pb-3">رقم المحمول</th>
-                  <th className="pb-3">أفراد الأسرة</th>
-                  <th className="pb-3">رصيد النقاط</th>
-                  <th className="pb-3 text-center pl-2">إجراءات</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#26312C]">
-                {filteredList.map((ben) => {
-                  const isUnmasked = !!unmaskedIds[ben.id];
-                  const displayedNid = isUnmasked
-                    ? unmaskedIds[ben.id]
-                    : maskNationalId(ben.nationalId);
+          <>
+            {/* Mobile Cards (Phones & Small Screens < 768px) */}
+            <div className="md:hidden space-y-3">
+              {filteredList.map((ben) => {
+                const isUnmasked = !!unmaskedIds[ben.id];
+                const displayedNid = isUnmasked
+                  ? unmaskedIds[ben.id]
+                  : maskNationalId(ben.nationalId);
 
-                  return (
-                    <tr key={ben.id} className="hover:bg-[#1C2521] transition">
-                      {/* Name & Note */}
-                      <td className="py-3 pr-2">
-                        <div className="font-semibold text-[#E8EDEA] text-sm">{ben.fullName}</div>
+                return (
+                  <div
+                    key={ben.id}
+                    className="p-4 rounded-xl bg-[#1C2521] border border-[#26312C] space-y-3 shadow-sm"
+                  >
+                    {/* Header: Name, Family, Points */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="font-bold text-[#E8EDEA] text-sm sm:text-base">
+                          {ben.fullName}
+                        </h3>
                         {ben.notes && (
-                          <div className="text-[11px] text-[#8A9690] line-clamp-1">{ben.notes}</div>
+                          <p className="text-[11px] text-[#8A9690] mt-0.5 line-clamp-2">
+                            {ben.notes}
+                          </p>
                         )}
-                      </td>
+                      </div>
+                      <div className="text-left flex-shrink-0">
+                        <span className="font-extrabold text-base text-[#E0B35A]">
+                          {ben.pointsBalance}
+                        </span>{' '}
+                        <span className="text-[10px] text-[#8A9690]">نقطة</span>
+                      </div>
+                    </div>
 
-                      {/* National ID with Reveal / Mask button */}
-                      <td className="py-3">
-                        <div className="flex items-center gap-2">
+                    {/* Metadata: National ID + Phone */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1 border-t border-[#26312C]">
+                      {/* National ID */}
+                      <div className="flex items-center justify-between bg-[#161D1A] px-2.5 py-1.5 rounded-lg border border-[#26312C]">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-[11px] text-[#8A9690] flex-shrink-0">الرقم القومي:</span>
                           <span
-                            className={`font-mono text-xs px-2 py-1 rounded-lg border ${
-                              isUnmasked
-                                ? 'bg-[#34C38F]/15 border-[#34C38F]/40 text-[#34C38F] font-bold'
-                                : 'bg-[#1C2521] border-[#26312C] text-[#8A9690]'
+                            className={`font-mono text-xs truncate ${
+                              isUnmasked ? 'text-[#34C38F] font-bold' : 'text-[#8A9690]'
                             }`}
                           >
                             {displayedNid}
                           </span>
-                          <button
-                            onClick={() => handleToggleUnmask(ben.id)}
-                            className="p-1 rounded-lg hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] transition"
-                            title={isUnmasked ? 'حجب الرقم القومي' : 'كشف الرقم القومي (يسجل بالتدقيق)'}
-                            aria-label={isUnmasked ? 'إخفاء الرقم القومي' : 'إظهار الرقم القومي'}
-                          >
-                            {isUnmasked ? (
-                              <EyeOff className="w-3.5 h-3.5 text-[#34C38F]" />
-                            ) : (
-                              <Eye className="w-3.5 h-3.5" />
-                            )}
-                          </button>
                         </div>
-                      </td>
+                        <button
+                          onClick={() => handleToggleUnmask(ben.id)}
+                          className="p-1 rounded text-[#8A9690] hover:text-[#E8EDEA] transition cursor-pointer flex-shrink-0"
+                          title={isUnmasked ? 'حجب الرقم القومي' : 'كشف الرقم القومي'}
+                          aria-label={isUnmasked ? 'إخفاء الرقم القومي' : 'إظهار الرقم القومي'}
+                        >
+                          {isUnmasked ? (
+                            <EyeOff className="w-4 h-4 text-[#34C38F]" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
 
-                      {/* Phone */}
-                      <td className="py-3 font-mono text-xs text-[#E8EDEA]">{ben.phone}</td>
+                      {/* Phone with Direct Call */}
+                      <div className="flex items-center justify-between bg-[#161D1A] px-2.5 py-1.5 rounded-lg border border-[#26312C]">
+                        <span className="text-[11px] text-[#8A9690]">المحمول:</span>
+                        <a
+                          href={`tel:${ben.phone}`}
+                          className="font-mono text-xs text-[#34C38F] hover:underline flex items-center gap-1"
+                          dir="ltr"
+                        >
+                          <Phone className="w-3 h-3" />
+                          <span>{ben.phone}</span>
+                        </a>
+                      </div>
+                    </div>
 
-                      {/* Family Size */}
-                      <td className="py-3 text-[#E8EDEA]">
-                        <span className="px-2 py-0.5 rounded-full bg-[#1C2521] border border-[#26312C]">
-                          {ben.familySize} أفراد
-                        </span>
-                      </td>
+                    {/* Family size badge & Actions */}
+                    <div className="flex items-center justify-between pt-2 border-t border-[#26312C] gap-2">
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-[#161D1A] border border-[#26312C] text-[#8A9690]">
+                        الأسرة: {ben.familySize} أفراد
+                      </span>
 
-                      {/* Points Balance */}
-                      <td className="py-3">
-                        <span className="font-bold text-sm text-[#E0B35A]">
-                          {ben.pointsBalance}
-                        </span>{' '}
-                        <span className="text-[10px] text-[#8A9690]">نقطة</span>
-                      </td>
+                      <div className="flex items-center gap-2">
+                        {/* Add Points */}
+                        <button
+                          onClick={() => {
+                            setPointsModalBeneficiary(ben);
+                            setPointsToAdd(50);
+                            setPointsReason('دعم تمويني إضافي');
+                            setPointsSuccess(null);
+                          }}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#E0B35A]/15 hover:bg-[#E0B35A]/25 text-[#E0B35A] border border-[#E0B35A]/30 text-xs font-bold transition cursor-pointer"
+                        >
+                          <Coins className="w-3.5 h-3.5" />
+                          <span>شحن نقاط</span>
+                        </button>
 
-                      {/* Actions */}
-                      <td className="py-3 pl-2 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {/* Add Points */}
-                          <button
-                            onClick={() => {
-                              setPointsModalBeneficiary(ben);
-                              setPointsToAdd(50);
-                              setPointsReason('دعم تمويني إضافي');
-                              setPointsSuccess(null);
-                            }}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#E0B35A]/15 hover:bg-[#E0B35A]/25 text-[#E0B35A] border border-[#E0B35A]/30 text-xs font-semibold transition"
-                            title="إضافة نقاط للمستفيد"
+                        {/* Edit */}
+                        <button
+                          onClick={() => openEditModal(ben)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#161D1A] hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] border border-[#26312C] text-xs transition cursor-pointer"
+                          aria-label={`تعديل ${ben.fullName}`}
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                          <span>تعديل</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop & Tablet Table (>= 768px) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-right text-xs min-w-[640px]">
+                <thead>
+                  <tr className="border-b border-[#26312C] text-[#8A9690]">
+                    <th className="pb-3 pr-2">اسم المستفيد</th>
+                    <th className="pb-3">الرقم القومي (محمي)</th>
+                    <th className="pb-3">رقم المحمول</th>
+                    <th className="pb-3">أفراد الأسرة</th>
+                    <th className="pb-3">رصيد النقاط</th>
+                    <th className="pb-3 text-center pl-2">إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#26312C]">
+                  {filteredList.map((ben) => {
+                    const isUnmasked = !!unmaskedIds[ben.id];
+                    const displayedNid = isUnmasked
+                      ? unmaskedIds[ben.id]
+                      : maskNationalId(ben.nationalId);
+
+                    return (
+                      <tr key={ben.id} className="hover:bg-[#1C2521] transition">
+                        {/* Name & Note */}
+                        <td className="py-3 pr-2">
+                          <div className="font-semibold text-[#E8EDEA] text-sm">{ben.fullName}</div>
+                          {ben.notes && (
+                            <div className="text-[11px] text-[#8A9690] line-clamp-1">{ben.notes}</div>
+                          )}
+                        </td>
+
+                        {/* National ID with Reveal / Mask button */}
+                        <td className="py-3">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`font-mono text-xs px-2 py-1 rounded-lg border ${
+                                isUnmasked
+                                  ? 'bg-[#34C38F]/15 border-[#34C38F]/40 text-[#34C38F] font-bold'
+                                  : 'bg-[#1C2521] border-[#26312C] text-[#8A9690]'
+                              }`}
+                            >
+                              {displayedNid}
+                            </span>
+                            <button
+                              onClick={() => handleToggleUnmask(ben.id)}
+                              className="p-1 rounded-lg hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] transition cursor-pointer"
+                              title={isUnmasked ? 'حجب الرقم القومي' : 'كشف الرقم القومي (يسجل بالتدقيق)'}
+                              aria-label={isUnmasked ? 'إخفاء الرقم القومي' : 'إظهار الرقم القومي'}
+                            >
+                              {isUnmasked ? (
+                                <EyeOff className="w-3.5 h-3.5 text-[#34C38F]" />
+                              ) : (
+                                <Eye className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* Phone with Click to Call */}
+                        <td className="py-3 font-mono text-xs text-[#E8EDEA]">
+                          <a
+                            href={`tel:${ben.phone}`}
+                            className="hover:text-[#34C38F] transition inline-flex items-center gap-1"
+                            title="اتصال هاتفي"
                           >
-                            <Coins className="w-3 h-3" />
-                            <span>شحن نقاط</span>
-                          </button>
+                            <Phone className="w-3 h-3 text-[#8A9690]" />
+                            <span>{ben.phone}</span>
+                          </a>
+                        </td>
 
-                          {/* Edit */}
-                          <button
-                            onClick={() => openEditModal(ben)}
-                            className="p-1.5 rounded-lg bg-[#1C2521] hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] transition"
-                            title="تعديل البيانات"
-                            aria-label={`تعديل بيانات ${ben.fullName}`}
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        {/* Family Size */}
+                        <td className="py-3 text-[#E8EDEA]">
+                          <span className="px-2 py-0.5 rounded-full bg-[#1C2521] border border-[#26312C]">
+                            {ben.familySize} أفراد
+                          </span>
+                        </td>
+
+                        {/* Points Balance */}
+                        <td className="py-3">
+                          <span className="font-bold text-sm text-[#E0B35A]">
+                            {ben.pointsBalance}
+                          </span>{' '}
+                          <span className="text-[10px] text-[#8A9690]">نقطة</span>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-3 pl-2 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {/* Add Points */}
+                            <button
+                              onClick={() => {
+                                setPointsModalBeneficiary(ben);
+                                setPointsToAdd(50);
+                                setPointsReason('دعم تمويني إضافي');
+                                setPointsSuccess(null);
+                              }}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#E0B35A]/15 hover:bg-[#E0B35A]/25 text-[#E0B35A] border border-[#E0B35A]/30 text-xs font-semibold transition cursor-pointer"
+                              title="إضافة نقاط للمستفيد"
+                            >
+                              <Coins className="w-3 h-3" />
+                              <span>شحن نقاط</span>
+                            </button>
+
+                            {/* Edit */}
+                            <button
+                              onClick={() => openEditModal(ben)}
+                              className="p-1.5 rounded-lg bg-[#1C2521] hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] transition cursor-pointer"
+                              title="تعديل البيانات"
+                              aria-label={`تعديل بيانات ${ben.fullName}`}
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
@@ -452,35 +596,63 @@ export const BeneficiariesView: React.FC<BeneficiariesViewProps> = ({
                 </div>
               </div>
 
-              {/* Family Size & Initial Points */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[#8A9690] mb-1 font-medium">عدد أفراد الأسرة</label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={20}
-                    value={formData.familySize}
-                    onChange={(e) =>
-                      setFormData({ ...formData, familySize: parseInt(e.target.value, 10) || 1 })
-                    }
-                    className="w-full bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2.5 text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
-                  />
+              {/* Family Size & Automatic Live Points Calculation */}
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[#8A9690] font-medium text-xs">
+                        عدد أفراد الأسرة (من 1 إلى 7 أفراد)
+                      </label>
+                      <span className="text-[10px] text-[#34C38F] font-semibold">محدد 1 - 7</span>
+                    </div>
+                    <input
+                      type="number"
+                      min={1}
+                      max={7}
+                      step={1}
+                      required
+                      value={formData.familySize}
+                      onChange={(e) => {
+                        const parsed = parseInt(e.target.value, 10);
+                        const cleanSize = Math.max(1, Math.min(7, isNaN(parsed) ? 1 : parsed));
+                        const tiers = dataService.getPointsTiers();
+                        const autoPts = calculateFamilyPoints(cleanSize, tiers);
+                        setFormData({
+                          ...formData,
+                          familySize: cleanSize,
+                          pointsBalance: autoPts,
+                        });
+                      }}
+                      className="w-full bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2.5 text-[#E8EDEA] font-bold text-center focus:outline-none focus:border-[#34C38F]"
+                    />
+                  </div>
+
+                  {/* Live Calculated Points Card (Points are never typed manually) */}
+                  <div className="p-3 rounded-xl bg-[#0F1412] border border-[#26312C] flex items-center justify-between">
+                    <div>
+                      <div className="text-[10px] text-[#8A9690] font-medium flex items-center gap-1">
+                        <Calculator className="w-3 h-3 text-[#34C38F]" />
+                        <span>النقاط المستحقة (احتساب آلي)</span>
+                      </div>
+                      <div className="text-[10px] text-[#34C38F] font-semibold mt-0.5">
+                        حساب تلقائي حسب الشرائح
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#E0B35A]/15 border border-[#E0B35A]/30 text-[#E0B35A] font-black text-lg">
+                      <Coins className="w-4 h-4" />
+                      <span>{formData.pointsBalance}</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-[#8A9690] mb-1 font-medium">
-                    رصيد نقاط التموين الأولي
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={formData.pointsBalance}
-                    onChange={(e) =>
-                      setFormData({ ...formData, pointsBalance: parseInt(e.target.value, 10) || 0 })
-                    }
-                    className="w-full bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2.5 text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
-                  />
+                {/* Micro info showing the exact formula preview */}
+                <div className="p-2.5 rounded-xl bg-[#1C2521] border border-[#26312C]/60 text-[11px] text-[#8A9690] flex items-center justify-between">
+                  <span>
+                    وفقاً للشرائح المعتمدة: الفرد 1 (30ن) + الفرد 2-3 (24ن/فرد) + الفرد 4-7 (21ن/فرد).
+                  </span>
+                  <span className="text-[#34C38F] font-bold">لا يُكتب يدوياً</span>
                 </div>
               </div>
 

@@ -188,51 +188,93 @@ export const LogsView: React.FC<LogsViewProps> = ({ deliveries, auditLogs }) => 
               <p>لا توجد أي عمليات صرف مطابقة لمعايير البحث الحالية.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-right text-xs">
-                <thead>
-                  <tr className="border-b border-[#26312C] text-[#8A9690]">
-                    <th className="pb-3 pr-2">كود الصرف</th>
-                    <th className="pb-3">التاريخ والوقت</th>
-                    <th className="pb-3">اسم المستفيد</th>
-                    <th className="pb-3">مسؤول الصرف</th>
-                    <th className="pb-3">السلع والأصناف المسلمة</th>
-                    <th className="pb-3">إجمالي النقاط</th>
-                    <th className="pb-3">الرصيد السابق</th>
-                    <th className="pb-3 pl-2">الرصيد المتبقي</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#26312C]">
-                  {filteredDeliveries.map((del) => (
-                    <tr key={del.id} className="hover:bg-[#1C2521] transition">
-                      <td className="py-3.5 pr-2 font-mono font-bold text-[#E0B35A]">
+            <>
+              {/* Mobile Deliveries Cards (< 768px) */}
+              <div className="md:hidden space-y-3">
+                {filteredDeliveries.map((del) => (
+                  <div
+                    key={del.id}
+                    className="p-4 rounded-xl bg-[#1C2521] border border-[#26312C] space-y-2.5 shadow-sm text-xs"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-bold text-sm text-[#E8EDEA]">{del.beneficiaryName}</div>
+                        <div className="text-[11px] text-[#8A9690]">
+                          بواسطة: {del.staffName} • {new Intl.DateTimeFormat('ar-EG', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(del.createdAt))}
+                        </div>
+                      </div>
+                      <span className="font-mono font-bold text-xs px-2 py-0.5 rounded-lg bg-[#161D1A] border border-[#26312C] text-[#E0B35A]">
                         {del.deliveryCode}
-                      </td>
-                      <td className="py-3.5 text-[#8A9690]">
-                        {new Intl.DateTimeFormat('ar-EG', {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
-                        }).format(new Date(del.createdAt))}
-                      </td>
-                      <td className="py-3.5 font-semibold text-[#E8EDEA]">{del.beneficiaryName}</td>
-                      <td className="py-3.5 text-[#8A9690]">{del.staffName}</td>
-                      <td className="py-3.5 text-[#8A9690] max-w-xs">
-                        {del.items
-                          .map((i) => `${i.productName} (${i.quantity} × ${i.unitPoints}ن)`)
-                          .join(' + ')}
-                      </td>
-                      <td className="py-3.5 font-bold text-[#34C38F]">
-                        {del.totalPoints} نقطة
-                      </td>
-                      <td className="py-3.5 text-[#8A9690]">{del.balanceBefore} نقطة</td>
-                      <td className="py-3.5 pl-2 font-semibold text-[#E0B35A]">
-                        {del.balanceAfter} نقطة
-                      </td>
+                      </span>
+                    </div>
+
+                    {/* Items */}
+                    <div className="p-2.5 rounded-lg bg-[#161D1A] border border-[#26312C] text-[#8A9690] text-[11px] leading-relaxed">
+                      {del.items.map((i) => `${i.productName} (${i.quantity} × ${i.unitPoints}ن)`).join(' + ')}
+                    </div>
+
+                    {/* Points balance */}
+                    <div className="flex items-center justify-between pt-1 border-t border-[#26312C] text-[11px]">
+                      <div>
+                        <span>النقاط: </span>
+                        <strong className="text-[#34C38F]">{del.totalPoints} نقطة</strong>
+                      </div>
+                      <div className="text-[#8A9690]">
+                        <span>المتبقي: </span>
+                        <strong className="text-[#E0B35A]">{del.balanceAfter} نقطة</strong>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop & Tablet Table (>= 768px) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-right text-xs min-w-[700px]">
+                  <thead>
+                    <tr className="border-b border-[#26312C] text-[#8A9690]">
+                      <th className="pb-3 pr-2">كود الصرف</th>
+                      <th className="pb-3">التاريخ والوقت</th>
+                      <th className="pb-3">اسم المستفيد</th>
+                      <th className="pb-3">مسؤول الصرف</th>
+                      <th className="pb-3">السلع والأصناف المسلمة</th>
+                      <th className="pb-3">إجمالي النقاط</th>
+                      <th className="pb-3">الرصيد السابق</th>
+                      <th className="pb-3 pl-2">الرصيد المتبقي</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-[#26312C]">
+                    {filteredDeliveries.map((del) => (
+                      <tr key={del.id} className="hover:bg-[#1C2521] transition">
+                        <td className="py-3.5 pr-2 font-mono font-bold text-[#E0B35A]">
+                          {del.deliveryCode}
+                        </td>
+                        <td className="py-3.5 text-[#8A9690]">
+                          {new Intl.DateTimeFormat('ar-EG', {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          }).format(new Date(del.createdAt))}
+                        </td>
+                        <td className="py-3.5 font-semibold text-[#E8EDEA]">{del.beneficiaryName}</td>
+                        <td className="py-3.5 text-[#8A9690]">{del.staffName}</td>
+                        <td className="py-3.5 text-[#8A9690] max-w-xs">
+                          {del.items
+                            .map((i) => `${i.productName} (${i.quantity} × ${i.unitPoints}ن)`)
+                            .join(' + ')}
+                        </td>
+                        <td className="py-3.5 font-bold text-[#34C38F]">
+                          {del.totalPoints} نقطة
+                        </td>
+                        <td className="py-3.5 text-[#8A9690]">{del.balanceBefore} نقطة</td>
+                        <td className="py-3.5 pl-2 font-semibold text-[#E0B35A]">
+                          {del.balanceAfter} نقطة
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}

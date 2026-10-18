@@ -147,9 +147,81 @@ export const StaffView: React.FC<StaffViewProps> = ({
       )}
 
       {/* Staff Accounts Table */}
-      <div className="bg-[#161D1A] border border-[#26312C] rounded-2xl p-5 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-right text-xs">
+      {/* Staff Accounts List */}
+      <div className="bg-[#161D1A] border border-[#26312C] rounded-2xl p-4 sm:p-5 shadow-sm overflow-hidden">
+        {/* Mobile Cards (< 768px) */}
+        <div className="md:hidden space-y-3">
+          {staffList.map((staff) => {
+            const isCurrent = currentUser?.id === staff.id;
+            return (
+              <div
+                key={staff.id}
+                className="p-4 rounded-xl bg-[#1C2521] border border-[#26312C] space-y-2.5 shadow-sm text-xs"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="font-bold text-sm text-[#E8EDEA] flex items-center gap-1.5">
+                      <span>{staff.fullName}</span>
+                      {isCurrent && (
+                        <span className="text-[10px] text-[#34C38F] font-bold">(حسابك)</span>
+                      )}
+                    </div>
+                    <div className="font-mono text-xs text-[#E0B35A] mt-0.5">@{staff.username}</div>
+                  </div>
+
+                  <div>
+                    {staff.role === 'admin' ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#E0B35A]/15 text-[#E0B35A] border border-[#E0B35A]/30 font-bold text-[10px]">
+                        <ShieldCheck className="w-3 h-3" />
+                        <span>مدير عام</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-semibold text-[10px]">
+                        <UserCheck className="w-3 h-3" />
+                        <span>مسؤول صرف</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-[#8A9690] flex items-center justify-between pt-1 border-t border-[#26312C]">
+                  <span className="font-mono">{staff.email}</span>
+                  <span className={staff.isActive ? 'text-[#34C38F]' : 'text-[#8A9690]'}>
+                    {staff.isActive ? '● نشط' : '○ معطل'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#26312C]">
+                  <button
+                    onClick={() => handleResetPassword(staff)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#161D1A] hover:bg-[#26312C] border border-[#26312C] text-xs font-semibold text-[#E8EDEA] transition cursor-pointer"
+                  >
+                    <KeyRound className="w-3.5 h-3.5 text-[#E0B35A]" />
+                    <span>إعادة تعيين كلمة المرور</span>
+                  </button>
+
+                  {!isCurrent && (
+                    <button
+                      onClick={() => handleToggleActive(staff.id)}
+                      className={`p-1.5 rounded-xl border text-xs transition cursor-pointer ${
+                        staff.isActive
+                          ? 'bg-[#161D1A] border-[#F0707A]/30 text-[#F0707A]'
+                          : 'bg-[#34C38F]/15 border-[#34C38F]/30 text-[#34C38F]'
+                      }`}
+                      title={staff.isActive ? 'تعطيل الحساب' : 'تفعيل الحساب'}
+                    >
+                      <Power className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop & Tablet Table (>= 768px) */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-right text-xs min-w-[640px]">
             <thead>
               <tr className="border-b border-[#26312C] text-[#8A9690]">
                 <th className="pb-3 pr-2">الموظف</th>
@@ -216,7 +288,7 @@ export const StaffView: React.FC<StaffViewProps> = ({
                         {/* Reset Password */}
                         <button
                           onClick={() => handleResetPassword(staff)}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#1C2521] hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] text-xs transition"
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#1C2521] hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] text-xs transition cursor-pointer"
                           title="إعادة تعيين كلمة المرور"
                         >
                           <KeyRound className="w-3 h-3 text-[#E0B35A]" />
@@ -227,7 +299,7 @@ export const StaffView: React.FC<StaffViewProps> = ({
                         {!isCurrent && (
                           <button
                             onClick={() => handleToggleActive(staff.id)}
-                            className={`p-1.5 rounded-lg transition ${
+                            className={`p-1.5 rounded-lg transition cursor-pointer ${
                               staff.isActive
                                 ? 'bg-[#1C2521] hover:bg-[#F0707A]/20 text-[#8A9690] hover:text-[#F0707A]'
                                 : 'bg-[#34C38F]/15 text-[#34C38F] hover:bg-[#34C38F]/25'

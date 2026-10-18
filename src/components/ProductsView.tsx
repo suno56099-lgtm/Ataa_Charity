@@ -245,7 +245,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
               {/* Add Product Button */}
               <button
                 onClick={openAddModal}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#34C38F] text-[#0F1412] font-bold text-sm shadow-md hover:bg-[#2bb27f] active:scale-95 transition cursor-pointer"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#34C38F] text-[#0F1412] font-bold text-sm shadow-md hover:bg-[#2bb27f] active:scale-95 transition cursor-pointer w-full sm:w-auto"
               >
                 <Plus className="w-4 h-4" />
                 <span>إضافة سلعة جديدة</span>
@@ -256,21 +256,21 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
       </div>
 
       {/* Filters & Search */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-[#161D1A] border border-[#26312C] rounded-2xl p-4 shadow-sm">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-[#161D1A] border border-[#26312C] rounded-2xl p-3 sm:p-4 shadow-sm">
         {/* Search */}
         <div className="flex items-center gap-2.5 bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2 flex-1">
-          <Search className="w-4 h-4 text-[#8A9690]" />
+          <Search className="w-4 h-4 text-[#8A9690] flex-shrink-0" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="ابحث باسم السلعة، سعر النقاط، أو التصنيف..."
-            className="w-full bg-transparent text-xs text-[#E8EDEA] placeholder-[#8A9690] focus:outline-none"
+            className="w-full bg-transparent text-xs sm:text-sm text-[#E8EDEA] placeholder-[#8A9690] focus:outline-none"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="text-[#8A9690] hover:text-[#E8EDEA]"
+              className="text-[#8A9690] hover:text-[#E8EDEA] p-1 cursor-pointer"
               aria-label="مسح البحث"
             >
               <X className="w-3.5 h-3.5" />
@@ -278,13 +278,13 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
           )}
         </div>
 
-        {/* Category Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+        {/* Category Pills with smooth horizontal scrolling */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 -mx-1 px-1">
           {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition cursor-pointer flex-shrink-0 ${
                 selectedCategory === cat
                   ? 'bg-[#34C38F] text-[#0F1412] font-bold shadow-sm'
                   : 'bg-[#1C2521] text-[#8A9690] hover:text-[#E8EDEA] hover:bg-[#26312C]'
@@ -298,7 +298,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
 
       {/* Products Grid */}
       {filteredProducts.length === 0 ? (
-        <div className="bg-[#161D1A] border border-[#26312C] rounded-2xl p-12 text-center text-[#8A9690] space-y-3">
+        <div className="bg-[#161D1A] border border-[#26312C] rounded-2xl p-8 sm:p-12 text-center text-[#8A9690] space-y-3">
           <Package className="w-12 h-12 mx-auto text-[#8A9690]/40" />
           <div className="text-base font-bold text-[#E8EDEA]">
             لا توجد سلع تموينية مطابقة للبحث
@@ -310,13 +310,13 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           {filteredProducts.map((prod) => {
             const isSoftDeleted = !!prod.isDeleted;
             return (
               <div
                 key={prod.id}
-                className={`rounded-2xl border p-5 transition flex flex-col justify-between ${
+                className={`rounded-2xl border p-4 sm:p-5 transition flex flex-col justify-between ${
                   isSoftDeleted
                     ? 'bg-[#1F1918]/60 border-[#F0707A]/30 opacity-75'
                     : prod.isActive
