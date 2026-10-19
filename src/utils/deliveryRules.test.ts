@@ -11,9 +11,9 @@ import {
   checkLeftoverPointsWarning,
 } from './deliveryRules.ts';
 
-test('generates valid 6-digit code', () => {
-  const code = generateSixDigitCode();
-  assert.match(code, /^\d{6}$/);
+test('generates valid code with ataa prefix and YYMM and 6 digits', () => {
+  const code = generateSixDigitCode('2026-10');
+  assert.match(code, /^ataa2610\d{6}$/);
 });
 
 test('formats Arabic month names correctly', () => {
@@ -23,38 +23,38 @@ test('formats Arabic month names correctly', () => {
 
 test('verifies delivery code - success scenario', () => {
   const record = {
-    code: '123456',
+    code: 'ataa2610123456',
     monthKey: '2026-10',
     status: 'available' as const,
   };
-  const result = verifyDeliveryCode('123456', record, '2026-10');
+  const result = verifyDeliveryCode('ataa2610123456', record, '2026-10');
   assert.equal(result.isValid, true);
 });
 
 test('verifies delivery code - wrong month scenario', () => {
   const record = {
-    code: '123456',
+    code: 'ataa2609123456',
     monthKey: '2026-09',
     status: 'available' as const,
   };
-  const result = verifyDeliveryCode('123456', record, '2026-10');
+  const result = verifyDeliveryCode('ataa2609123456', record, '2026-10');
   assert.equal(result.isValid, false);
   assert.equal(result.errorCode, 'WRONG_MONTH');
 });
 
 test('verifies delivery code - already used scenario', () => {
   const record = {
-    code: '123456',
+    code: 'ataa2610123456',
     monthKey: '2026-10',
     status: 'used' as const,
   };
-  const result = verifyDeliveryCode('123456', record, '2026-10');
+  const result = verifyDeliveryCode('ataa2610123456', record, '2026-10');
   assert.equal(result.isValid, false);
   assert.equal(result.errorCode, 'ALREADY_USED');
 });
 
 test('verifies delivery code - format error', () => {
-  const result = verifyDeliveryCode('123', null, '2026-10');
+  const result = verifyDeliveryCode('invalid-code', null, '2026-10');
   assert.equal(result.isValid, false);
   assert.equal(result.errorCode, 'INVALID_FORMAT');
 });

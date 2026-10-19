@@ -81,6 +81,14 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
 
   // Cart Management
   const updateQuantity = (product: Product, delta: number) => {
+    if (delta > 0 && verifiedBeneficiary) {
+      const maxLimit = dataService.getProductLimit(product.id, verifiedBeneficiary.familySize);
+      const currentQty = getProductQuantityInCart(product.id);
+      if (maxLimit !== null && currentQty + delta > maxLimit) {
+        return;
+      }
+    }
+
     setCart((prev) => {
       const existing = prev.find((item) => item.productId === product.id);
       if (existing) {
@@ -198,7 +206,7 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
               صرف وتسليم الحصة التموينية
             </h1>
             <p className="text-xs text-[#8A9690] mt-1.5 max-w-md mx-auto leading-relaxed">
-              أدخل كود الاستلام الشهري المكون من 6 أرقام والمستلم من قبل المستفيد عبر رسالة SMS
+              أدخل كود الاستلام الشهري المعتمد (مثال: ataa2610482915) والمستلم من قبل المستفيد عبر رسالة SMS
               لشهر أكتوبر 2026.
             </p>
             <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1C2521] border border-[#26312C] text-xs text-[#E0B35A]">
@@ -213,27 +221,27 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
             </div>
           )}
 
-          {/* 6-Digit Code Input Box with numeric keypad optimization */}
+          {/* Code Input Box accepting full code (ignores spaces & case) */}
           <div className="space-y-3">
             <input
               type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              autoComplete="one-time-code"
-              maxLength={6}
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck="false"
               value={inputCode}
-              onChange={(e) => setInputCode(e.target.value.replace(/\D/g, ''))}
+              onChange={(e) => setInputCode(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleVerify();
               }}
-              placeholder="0 0 0 0 0 0"
-              className="w-full max-w-xs mx-auto text-center font-mono text-2xl sm:text-3xl font-extrabold tracking-[0.4em] sm:tracking-[0.5em] px-4 py-3 rounded-2xl bg-[#1C2521] border-2 border-[#26312C] focus:border-[#34C38F] text-[#E0B35A] focus:outline-none shadow-inner"
+              placeholder="مثال: ataa2610482915"
+              className="w-full max-w-sm mx-auto text-center font-mono text-base sm:text-lg font-extrabold tracking-wider px-4 py-3 rounded-2xl bg-[#1C2521] border-2 border-[#26312C] focus:border-[#34C38F] text-[#E0B35A] focus:outline-none shadow-inner"
             />
 
             <div>
               <button
+                type="button"
                 onClick={() => handleVerify()}
-                className="w-full max-w-xs mx-auto flex items-center justify-center gap-2 py-3 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] text-[#0F1412] font-bold text-sm shadow-lg transition active:scale-95 cursor-pointer"
+                className="w-full max-w-sm mx-auto flex items-center justify-center gap-2 py-3 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] text-[#0F1412] font-bold text-sm shadow-lg transition active:scale-95 cursor-pointer"
               >
                 <span>التحقق من الكود والمستفيد</span>
                 <ArrowRight className="w-4 h-4 rotate-180" />
@@ -248,22 +256,25 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
             </span>
             <div className="flex flex-wrap items-center justify-center gap-2">
               <button
-                onClick={() => handleQuickDemoCode('482915')}
-                className="px-3 py-1.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-xs font-mono text-[#E0B35A] transition"
+                type="button"
+                onClick={() => handleQuickDemoCode('ataa2610482915')}
+                className="px-3 py-1.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-xs font-mono text-[#E0B35A] transition cursor-pointer"
               >
-                482915 (فاطمة - 140 نقطة)
+                ataa2610482915 (فاطمة - 120 نقطة)
               </button>
               <button
-                onClick={() => handleQuickDemoCode('739104')}
-                className="px-3 py-1.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-xs font-mono text-[#E0B35A] transition"
+                type="button"
+                onClick={() => handleQuickDemoCode('ataa2610739104')}
+                className="px-3 py-1.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-xs font-mono text-[#E0B35A] transition cursor-pointer"
               >
-                739104 (محمود - 175 نقطة)
+                ataa2610739104 (محمود - 141 نقطة)
               </button>
               <button
-                onClick={() => handleQuickDemoCode('195820')}
-                className="px-3 py-1.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-xs font-mono text-[#E0B35A] transition"
+                type="button"
+                onClick={() => handleQuickDemoCode('ataa2610195820')}
+                className="px-3 py-1.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-xs font-mono text-[#E0B35A] transition cursor-pointer"
               >
-                195820 (زينب - 110 نقطة)
+                ataa2610195820 (زينب - 99 نقطة)
               </button>
             </div>
           </div>
@@ -342,6 +353,11 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
                   .filter((p) => p.isActive)
                   .map((product) => {
                     const inCartQty = getProductQuantityInCart(product.id);
+                    const maxLimit = verifiedBeneficiary
+                      ? dataService.getProductLimit(product.id, verifiedBeneficiary.familySize)
+                      : null;
+                    const isLimitReached = maxLimit !== null && inCartQty >= maxLimit;
+
                     return (
                       <div
                         key={product.id}
@@ -354,9 +370,16 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
                         <div>
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <h4 className="font-bold text-[#E8EDEA] text-sm">
-                                {product.name}
-                              </h4>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="font-bold text-[#E8EDEA] text-sm">
+                                  {product.name}
+                                </h4>
+                                {maxLimit !== null && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#E0B35A]/15 text-[#E0B35A] font-bold border border-[#E0B35A]/30">
+                                    الحد الأقصى {maxLimit}
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-[11px] text-[#8A9690] mt-0.5">
                                 {product.unit} • {product.category}
                               </div>
@@ -372,9 +395,10 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
                           <span className="text-xs text-[#8A9690]">الكمية المصروفة:</span>
                           <div className="flex items-center gap-2">
                             <button
+                              type="button"
                               onClick={() => updateQuantity(product, -1)}
                               disabled={inCartQty === 0}
-                              className="w-8 h-8 rounded-lg bg-[#26312C] hover:bg-[#32403a] disabled:opacity-30 disabled:hover:bg-[#26312C] text-[#E8EDEA] flex items-center justify-center transition"
+                              className="w-8 h-8 rounded-lg bg-[#26312C] hover:bg-[#32403a] disabled:opacity-30 disabled:hover:bg-[#26312C] text-[#E8EDEA] flex items-center justify-center transition cursor-pointer"
                               aria-label={`تقليل كمية ${product.name}`}
                             >
                               <Minus className="w-3.5 h-3.5" />
@@ -383,9 +407,12 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
                               {inCartQty}
                             </span>
                             <button
+                              type="button"
                               onClick={() => updateQuantity(product, 1)}
-                              className="w-8 h-8 rounded-lg bg-[#34C38F] hover:bg-[#2bb27f] text-[#0F1412] font-bold flex items-center justify-center transition shadow-sm"
+                              disabled={isLimitReached}
+                              className="w-8 h-8 rounded-lg bg-[#34C38F] hover:bg-[#2bb27f] disabled:opacity-35 disabled:hover:bg-[#34C38F] text-[#0F1412] font-bold flex items-center justify-center transition shadow-sm cursor-pointer disabled:cursor-not-allowed"
                               aria-label={`زيادة كمية ${product.name}`}
+                              title={isLimitReached ? `تم الوصول للحد الأقصى المسموح (${maxLimit} قطع)` : undefined}
                             >
                               <Plus className="w-3.5 h-3.5" />
                             </button>
@@ -644,6 +671,7 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
         <InvoiceModal
           delivery={completedDelivery}
           isNewDeliverySuccess={true}
+          isInline={true}
           onNewDelivery={handleReset}
           onClose={handleReset}
         />

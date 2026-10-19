@@ -41,6 +41,16 @@ export interface Product {
   updatedAt?: string;
 }
 
+export interface ProductQuantityLimit {
+  id: string;
+  productId: string;
+  productName: string;
+  familySize: number; // 1 to 7+
+  maxQuantity: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface PointsTierConfig {
   tier1: number; // 1st member points (default 30)
   tier2: number; // 2nd and 3rd member points each (default 24)
@@ -108,7 +118,9 @@ export type AuditActionType =
   | 'STAFF_TOGGLE'
   | 'STAFF_RESET_PWD'
   | 'STAFF_LOGIN'
-  | 'STAFF_LOGOUT';
+  | 'STAFF_LOGOUT'
+  | 'PRODUCT_LIMIT_SAVE'
+  | 'PRODUCT_LIMIT_DELETE';
 
 export interface AuditLogEntry {
   id: string;

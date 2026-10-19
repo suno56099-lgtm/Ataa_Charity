@@ -43,16 +43,40 @@ export function formatMonthArabic(monthKey: string): string {
 }
 
 /**
- * Generates a cryptographically random 6-digit verification code
+ * Extract YYMM prefix from month key (e.g. '2026-10' -> 'ataa2610')
  */
-export function generateSixDigitCode(): string {
-  const min = 100000;
-  const max = 999999;
-  return Math.floor(min + Math.random() * (max - min + 1)).toString();
+export function getMonthCodePrefix(monthKey: string): string {
+  if (!monthKey || !monthKey.includes('-')) return 'ataa2610';
+  const [year, month] = monthKey.split('-');
+  const yy = year.slice(-2);
+  const mm = month.padStart(2, '0');
+  return `ataa${yy}${mm}`;
 }
 
 /**
- * Validates a beneficiary code for delivery
+ * Generates a cryptographically secure beneficiary code matching:
+ * fixed prefix "ataa" + 2-digit year + 2-digit month (YYMM) + 6 random digits
+ * Example for October 2026: ataa2610384957
+ */
+export function generateBeneficiaryCode(monthKey: string): string {
+  const prefix = getMonthCodePrefix(monthKey);
+  const randomBuffer = new Uint32Array(1);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(randomBuffer);
+  } else {
+    randomBuffer[0] = Math.floor(Math.random() * 1000000000);
+  }
+  const digits = (100000 + (randomBuffer[0] % 900000)).toString();
+  return `${prefix}${digits}`;
+}
+
+export function generateSixDigitCode(monthKey: string = '2026-10'): string {
+  return generateBeneficiaryCode(monthKey);
+}
+
+/**
+ * Validates a beneficiary code for delivery:
+ * Accepts full code, ignores spaces and letter case, and rejects wrong YYMM or non-matching records.
  */
 export function verifyDeliveryCode(
   inputCode: string,
@@ -63,17 +87,51 @@ export function verifyDeliveryCode(
   } | null | undefined,
   currentMonth: string
 ): VerificationResult {
-  const cleanCode = (inputCode || '').trim();
+  // Normalize: remove all whitespace and convert to lowercase
+  const cleanCode = (inputCode || '').replace(/\s+/g, '').toLowerCase();
 
-  if (!/^\d{6}$/.test(cleanCode)) {
+  if (!cleanCode) {
     return {
       isValid: false,
       errorCode: 'INVALID_FORMAT',
-      errorMessageArabic: 'كود الاستلام يجب أن يتكون من 6 أرقام',
+      errorMessageArabic: 'يرجى إدخال كود الاستلام (مثال: ataa2610482915)',
     };
   }
 
-  if (!record || record.code !== cleanCode) {
+  // Handle case where user types or pastes full code or 6 random digits
+  let effectiveCode = cleanCode;
+  if (/^\d{6}$/.test(cleanCode)) {
+    effectiveCode = `${getMonthCodePrefix(currentMonth)}${cleanCode}`;
+  }
+
+  // Regex check: starts with 'ataa' followed by 4 digits (YYMM) then 6 digits
+  const codeRegex = /^ataa(\d{2})(\d{2})\d{6}$/;
+  const match = effectiveCode.match(codeRegex);
+
+  if (!match) {
+    return {
+      isValid: false,
+      errorCode: 'INVALID_FORMAT',
+      errorMessageArabic: 'صيغة كود الاستلام غير صحيحة. يجب أن يبدأ بـ ataa متبوعاً بسنة وشهر الصرف و6 أرقام (مثال: ataa2610482915)',
+    };
+  }
+
+  // Check YYMM matches current month
+  const expectedPrefix = getMonthCodePrefix(currentMonth);
+  if (!effectiveCode.startsWith(expectedPrefix)) {
+    const codeYear = '20' + match[1];
+    const codeMonth = match[2];
+    const codeMonthName = ARABIC_MONTH_NAMES[codeMonth] || codeMonth;
+    const currentMonthName = formatMonthArabic(currentMonth);
+    return {
+      isValid: false,
+      errorCode: 'WRONG_MONTH',
+      errorMessageArabic: `هذا الكود مخصص لشهر (${codeMonthName} ${codeYear}) ولا يطابق شهر الصرف الحالي (${currentMonthName})`,
+    };
+  }
+
+  // Check matching database record (case-insensitive)
+  if (!record) {
     return {
       isValid: false,
       errorCode: 'CODE_NOT_FOUND',
@@ -81,11 +139,23 @@ export function verifyDeliveryCode(
     };
   }
 
-  if (record.monthKey !== currentMonth) {
+  // Check if record belongs to a different month
+  if (record.monthKey && record.monthKey !== currentMonth) {
+    const recordMonthName = formatMonthArabic(record.monthKey);
+    const currentMonthName = formatMonthArabic(currentMonth);
     return {
       isValid: false,
       errorCode: 'WRONG_MONTH',
-      errorMessageArabic: `هذا الكود غير مخصص للشهر الحالي (${formatMonthArabic(currentMonth)}) بل لشهر (${formatMonthArabic(record.monthKey)})`,
+      errorMessageArabic: `هذا الكود مخصص لشهر (${recordMonthName}) ولا يطابق شهر الصرف الحالي (${currentMonthName})`,
+    };
+  }
+
+  const recordCodeNorm = (record.code || '').replace(/\s+/g, '').toLowerCase();
+  if (recordCodeNorm !== effectiveCode && !recordCodeNorm.endsWith(cleanCode)) {
+    return {
+      isValid: false,
+      errorCode: 'CODE_NOT_FOUND',
+      errorMessageArabic: 'كود الاستلام غير صحيح أو غير مسجل في المنظومة',
     };
   }
 
@@ -93,7 +163,7 @@ export function verifyDeliveryCode(
     return {
       isValid: false,
       errorCode: 'ALREADY_USED',
-      errorMessageArabic: 'تم استخدام هذا الكود بالفعل مسبقاً ولا يمكن تكرار الصرف به',
+      errorMessageArabic: 'تم استخدام هذا الكود بالفعل مسبقاً ولا يمكن تكرار الصرف به لهذا الشهر',
     };
   }
 

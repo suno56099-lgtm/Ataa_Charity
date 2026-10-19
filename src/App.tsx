@@ -105,7 +105,7 @@ export default function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
         inactivitySecondsRemaining={inactivitySecondsRemaining}
-        onOpenMobileMenu={() => setIsMobileDrawerOpen(true)}
+        onOpenMobileMenu={() => setIsMobileDrawerOpen((prev) => !prev)}
       />
 
       {/* Main Body Layout: Sidebar + Content */}

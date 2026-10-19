@@ -8,6 +8,7 @@ import {
   StaffAccount,
   Beneficiary,
   Product,
+  ProductQuantityLimit,
   MonthlyCode,
   DeliveryRecord,
   DeliveryItemRecord,
@@ -39,6 +40,8 @@ const STORAGE_KEYS = {
   AUDIT_LOGS: 'ataa_audit_logs_v4',
   LOGIN_ATTEMPTS: 'ataa_login_attempts_v4',
   POINTS_TIERS: 'ataa_points_tiers_v4',
+  PRODUCT_LIMITS: 'ataa_product_limits_v5',
+  SETTINGS: 'ataa_settings_v1',
 };
 
 // Seed Data
@@ -274,7 +277,7 @@ const INITIAL_CODES: MonthlyCode[] = [
     beneficiaryPhone: '01014589231',
     beneficiaryNationalId: '28503140101234',
     monthKey: '2026-10',
-    code: '482915',
+    code: 'ataa2610482915',
     status: 'available',
     createdAt: '2026-10-01T08:00:00Z',
   },
@@ -285,7 +288,7 @@ const INITIAL_CODES: MonthlyCode[] = [
     beneficiaryPhone: '01128945671',
     beneficiaryNationalId: '27911052402145',
     monthKey: '2026-10',
-    code: '739104',
+    code: 'ataa2610739104',
     status: 'available',
     createdAt: '2026-10-01T08:00:00Z',
   },
@@ -296,7 +299,7 @@ const INITIAL_CODES: MonthlyCode[] = [
     beneficiaryPhone: '01278451290',
     beneficiaryNationalId: '30107202100892',
     monthKey: '2026-10',
-    code: '195820',
+    code: 'ataa2610195820',
     status: 'available',
     createdAt: '2026-10-01T08:00:00Z',
   },
@@ -307,7 +310,7 @@ const INITIAL_CODES: MonthlyCode[] = [
     beneficiaryPhone: '01551239845',
     beneficiaryNationalId: '29209121603587',
     monthKey: '2026-10',
-    code: '654321',
+    code: 'ataa2610654321',
     status: 'available',
     createdAt: '2026-10-01T08:00:00Z',
   },
@@ -318,7 +321,7 @@ const INITIAL_CODES: MonthlyCode[] = [
     beneficiaryPhone: '01096325874',
     beneficiaryNationalId: '28804250204781',
     monthKey: '2026-10',
-    code: '981245',
+    code: 'ataa2610981245',
     status: 'available',
     createdAt: '2026-10-01T08:00:00Z',
   },
@@ -328,7 +331,7 @@ const INITIAL_DELIVERIES: DeliveryRecord[] = [
   {
     id: 'del_1001',
     codeId: 'c1',
-    deliveryCode: '482915',
+    deliveryCode: 'ataa2610482915',
     beneficiaryId: 'b1',
     beneficiaryName: 'فاطمة محمد السيد حسن',
     beneficiaryPhone: '01014589231',
@@ -351,7 +354,7 @@ const INITIAL_DELIVERIES: DeliveryRecord[] = [
   {
     id: 'del_1002',
     codeId: 'c2',
-    deliveryCode: '739104',
+    deliveryCode: 'ataa2610739104',
     beneficiaryId: 'b2',
     beneficiaryName: 'محمود عبد الرحمن خليل',
     beneficiaryPhone: '01128945671',
@@ -363,13 +366,50 @@ const INITIAL_DELIVERIES: DeliveryRecord[] = [
     expired_points: 7,
     items: [
       { id: 'di_6', deliveryId: 'del_1002', productId: 'prod_1', productName: 'زيت طعام خليط 800 مل', unitPoints: 12, quantity: 2, subtotalPoints: 24 },
-      { id: 'di_7', deliveryId: 'del_1002', productId: 'prod_7', productName: 'لحم بقري بلدي مفروم 500 جم', unitPoints: 25, quantity: 2, subtotalPoints: 50 },
-      { id: 'di_8', deliveryId: 'del_1002', productId: 'prod_2', productName: 'أرز مصري معبأ 1 كجم', unitPoints: 10, quantity: 4, subtotalPoints: 40 },
-      { id: 'di_9', deliveryId: 'del_1002', productId: 'prod_3', productName: 'سكر ناعم 1 كجم', unitPoints: 10, quantity: 2, subtotalPoints: 20 },
+      { id: 'di_7', deliveryId: 'del_1002', productId: 'prod_7', productName: 'عدس بجبة 400 جرام - ماركت', unitPoints: 5, quantity: 2, subtotalPoints: 10 },
+      { id: 'di_8', deliveryId: 'del_1002', productId: 'prod_2', productName: 'سكر 400 جرام - ماركت', unitPoints: 3, quantity: 4, subtotalPoints: 12 },
+      { id: 'di_9', deliveryId: 'del_1002', productId: 'prod_3', productName: 'زيت طعام 500 مللي', unitPoints: 10, quantity: 2, subtotalPoints: 20 },
     ],
     notes: 'تسليم حصة الأسرة لشهر أكتوبر 2026',
     createdAt: '2026-10-17T14:15:00Z',
   },
+];
+
+const INITIAL_PRODUCT_LIMITS: ProductQuantityLimit[] = [
+  // Family size 1: rice 1, sugar 1, oil 1
+  { id: 'lim_f1_rice', productId: 'prod_1', productName: 'أرز 800 جرام - ماركت', familySize: 1, maxQuantity: 1, createdAt: '2026-10-01T00:00:00Z' },
+  { id: 'lim_f1_sugar', productId: 'prod_2', productName: 'سكر 400 جرام - ماركت', familySize: 1, maxQuantity: 1, createdAt: '2026-10-01T00:00:00Z' },
+  { id: 'lim_f1_oil', productId: 'prod_3', productName: 'زيت طعام 500 مللي', familySize: 1, maxQuantity: 1, createdAt: '2026-10-01T00:00:00Z' },
+
+  // Family size 2: rice 2, sugar 1, oil 1
+  { id: 'lim_f2_rice', productId: 'prod_1', productName: 'أرز 800 جرام - ماركت', familySize: 2, maxQuantity: 2, createdAt: '2026-10-01T00:00:00Z' },
+  { id: 'lim_f2_sugar', productId: 'prod_2', productName: 'سكر 400 جرام - ماركت', familySize: 2, maxQuantity: 1, createdAt: '2026-10-01T00:00:00Z' },
+  { id: 'lim_f2_oil', productId: 'prod_3', productName: 'زيت طعام 500 مللي', familySize: 2, maxQuantity: 1, createdAt: '2026-10-01T00:00:00Z' },
+
+  // Family size 3: rice 3, sugar 2, oil 1
+  { id: 'lim_f3_rice', productId: 'prod_1', productName: 'أرز 800 جرام - ماركت', familySize: 3, maxQuantity: 3, createdAt: '2026-10-01T00:00:00Z' },
+  { id: 'lim_f3_sugar', productId: 'prod_2', productName: 'سكر 400 جرام - ماركت', familySize: 3, maxQuantity: 2, createdAt: '2026-10-01T00:00:00Z' },
+  { id: 'lim_f3_oil', productId: 'prod_3', productName: 'زيت طعام 500 مللي', familySize: 3, maxQuantity: 1, createdAt: '2026-10-01T00:00:00Z' },
+
+  // Family size 4: rice 4, sugar 2, oil 2
+  { id: 'lim_f4_rice', productId: 'prod_1', productName: 'أرز 800 جرام - ماركت', familySize: 4, maxQuantity: 4, createdAt: '2026-10-01T00:00:00Z' },
+  { id: 'lim_f4_sugar', productId: 'prod_2', productName: 'سكر 400 جرام - ماركت', familySize: 4, maxQuantity: 2, createdAt: '2026-10-01T00:00:00Z' },
+  { id: 'lim_f4_oil', productId: 'prod_3', productName: 'زيت طعام 500 مللي', familySize: 4, maxQuantity: 2, createdAt: '2026-10-01T00:00:00Z' },
+
+  // Family size 5: rice 5, sugar 3, oil 2
+  { id: 'lim_f5_rice', productId: 'prod_1', productName: 'أرز 800 جرام - ماركت', familySize: 5, maxQuantity: 5, createdAt: '2026-10-01T00:00:00Z' },
+  { id: 'lim_f5_sugar', productId: 'prod_2', productName: 'سكر 400 جرام - ماركت', familySize: 5, maxQuantity: 3, createdAt: '2026-10-01T00:00:00Z' },
+  { id: 'lim_f5_oil', productId: 'prod_3', productName: 'زيت طعام 500 مللي', familySize: 5, maxQuantity: 2, createdAt: '2026-10-01T00:00:00Z' },
+
+  // Family size 6: rice 5, sugar 3, oil 3
+  { id: 'lim_f6_rice', productId: 'prod_1', productName: 'أرز 800 جرام - ماركت', familySize: 6, maxQuantity: 5, createdAt: '2026-10-01T00:00:00Z' },
+  { id: 'lim_f6_sugar', productId: 'prod_2', productName: 'سكر 400 جرام - ماركت', familySize: 6, maxQuantity: 3, createdAt: '2026-10-01T00:00:00Z' },
+  { id: 'lim_f6_oil', productId: 'prod_3', productName: 'زيت طعام 500 مللي', familySize: 6, maxQuantity: 3, createdAt: '2026-10-01T00:00:00Z' },
+
+  // Family size 7: rice 5, sugar 4, oil 3
+  { id: 'lim_f7_rice', productId: 'prod_1', productName: 'أرز 800 جرام - ماركت', familySize: 7, maxQuantity: 5, createdAt: '2026-10-01T00:00:00Z' },
+  { id: 'lim_f7_sugar', productId: 'prod_2', productName: 'سكر 400 جرام - ماركت', familySize: 7, maxQuantity: 4, createdAt: '2026-10-01T00:00:00Z' },
+  { id: 'lim_f7_oil', productId: 'prod_3', productName: 'زيت طعام 500 مللي', familySize: 7, maxQuantity: 3, createdAt: '2026-10-01T00:00:00Z' },
 ];
 
 const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
@@ -998,9 +1038,137 @@ class DataService {
     return { success: true };
   }
 
+  // ================= Product Quantity Limits =================
+  getProductLimits(): ProductQuantityLimit[] {
+    const stored = this.getStorage<ProductQuantityLimit[] | null>(STORAGE_KEYS.PRODUCT_LIMITS, null);
+    if (!stored || !Array.isArray(stored) || stored.length < 21) {
+      this.setStorage(STORAGE_KEYS.PRODUCT_LIMITS, INITIAL_PRODUCT_LIMITS);
+      return INITIAL_PRODUCT_LIMITS;
+    }
+    return stored;
+  }
+
+  getProductLimit(productId: string, familySize: number): number | null {
+    const limits = this.getProductLimits();
+    const found = limits.find(
+      (l) => l.productId === productId && Number(l.familySize) === Number(familySize)
+    );
+    return found ? found.maxQuantity : null;
+  }
+
+  saveProductLimit(limitData: {
+    id?: string;
+    productId: string;
+    productName: string;
+    familySize: number;
+    maxQuantity: number;
+  }): { success: boolean; error?: string } {
+    const limits = this.getProductLimits();
+    const products = this.getAllProducts();
+    const prod = products.find((p) => p.id === limitData.productId);
+    const prodName = prod ? prod.name : limitData.productName;
+
+    if (limitData.id) {
+      const index = limits.findIndex((l) => l.id === limitData.id);
+      if (index === -1) return { success: false, error: 'الحد الأقصى غير موجود' };
+
+      const duplicate = limits.find(
+        (l) =>
+          l.id !== limitData.id &&
+          l.productId === limitData.productId &&
+          Number(l.familySize) === Number(limitData.familySize)
+      );
+      if (duplicate) {
+        return {
+          success: false,
+          error: `يوجد بالفعل حد أقصى مسجل لهذا المنتج ولأسرة مكونة من ${limitData.familySize} أفراد`,
+        };
+      }
+
+      limits[index] = {
+        ...limits[index],
+        productId: limitData.productId,
+        productName: prodName,
+        familySize: Number(limitData.familySize),
+        maxQuantity: Number(limitData.maxQuantity),
+        updatedAt: new Date().toISOString(),
+      };
+    } else {
+      const duplicate = limits.find(
+        (l) =>
+          l.productId === limitData.productId &&
+          Number(l.familySize) === Number(limitData.familySize)
+      );
+      if (duplicate) {
+        return {
+          success: false,
+          error: `يوجد بالفعل حد أقصى مسجل لهذا المنتج ولأسرة مكونة من ${limitData.familySize} أفراد`,
+        };
+      }
+
+      const newLimit: ProductQuantityLimit = {
+        id: 'lim_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        productId: limitData.productId,
+        productName: prodName,
+        familySize: Number(limitData.familySize),
+        maxQuantity: Number(limitData.maxQuantity),
+        createdAt: new Date().toISOString(),
+      };
+      limits.push(newLimit);
+    }
+
+    this.setStorage(STORAGE_KEYS.PRODUCT_LIMITS, limits);
+
+    const current = this.getCurrentUser();
+    if (current) {
+      this.recordAuditLog({
+        action: 'PRODUCT_LIMIT_SAVE',
+        actorId: current.id,
+        actorName: current.fullName,
+        actorRole: current.role,
+        targetName: `${prodName} - أسرة ${limitData.familySize} أفراد`,
+        details: `حفظ حد أقصى للصنف (${prodName}): ${limitData.maxQuantity} قطع لأسرة مكونة من ${limitData.familySize} أفراد`,
+      });
+    }
+
+    return { success: true };
+  }
+
+  deleteProductLimit(id: string): { success: boolean; error?: string } {
+    const limits = this.getProductLimits();
+    const index = limits.findIndex((l) => l.id === id);
+    if (index === -1) return { success: false, error: 'الحد الأقصى غير موجود' };
+
+    const target = limits[index];
+    limits.splice(index, 1);
+    this.setStorage(STORAGE_KEYS.PRODUCT_LIMITS, limits);
+
+    const current = this.getCurrentUser();
+    if (current) {
+      this.recordAuditLog({
+        action: 'PRODUCT_LIMIT_DELETE',
+        actorId: current.id,
+        actorName: current.fullName,
+        actorRole: current.role,
+        targetName: `${target.productName} - أسرة ${target.familySize} أفراد`,
+        details: `حذف الحد الأقصى للصنف (${target.productName}) لأسرة مكونة من ${target.familySize} أفراد`,
+      });
+    }
+
+    return { success: true };
+  }
+
   // ================= Monthly Codes =================
   getMonthlyCodes(monthKey: string): MonthlyCode[] {
-    const list = this.getStorage<MonthlyCode[]>(STORAGE_KEYS.MONTHLY_CODES, INITIAL_CODES);
+    const rawList = this.getStorage<MonthlyCode[]>(STORAGE_KEYS.MONTHLY_CODES, INITIAL_CODES);
+    const list = rawList.map((c) => {
+      if (c.code && /^\d{6}$/.test(c.code)) {
+        const [year, month] = (c.monthKey || '2026-10').split('-');
+        const prefix = `ataa${(year || '2026').slice(-2)}${(month || '10').padStart(2, '0')}`;
+        return { ...c, code: `${prefix}${c.code}` };
+      }
+      return c;
+    });
     return list.filter((c) => c.monthKey === monthKey);
   }
 
@@ -1034,10 +1202,10 @@ class DataService {
         continue;
       }
 
-      // Generate unique 6-digit code
-      let code = generateSixDigitCode();
+      // Generate unique code with format: ataa + YYMM + 6 random digits
+      let code = generateSixDigitCode(monthKey);
       while (allCodeValues.has(code)) {
-        code = generateSixDigitCode();
+        code = generateSixDigitCode(monthKey);
       }
       allCodeValues.add(code);
 
@@ -1082,11 +1250,25 @@ class DataService {
     codeRecord?: MonthlyCode;
     beneficiary?: Beneficiary;
   } {
-    const cleanCode = (inputCode || '').trim();
-    const codes = this.getStorage<MonthlyCode[]>(STORAGE_KEYS.MONTHLY_CODES, INITIAL_CODES);
-    const codeRecord = codes.find((c) => c.code === cleanCode);
+    const rawClean = (inputCode || '').replace(/\s+/g, '').toLowerCase();
+    const rawList = this.getStorage<MonthlyCode[]>(STORAGE_KEYS.MONTHLY_CODES, INITIAL_CODES);
+    const codes = rawList.map((c) => {
+      if (c.code && /^\d{6}$/.test(c.code)) {
+        const [year, month] = (c.monthKey || '2026-10').split('-');
+        const prefix = `ataa${(year || '2026').slice(-2)}${(month || '10').padStart(2, '0')}`;
+        return { ...c, code: `${prefix}${c.code}` };
+      }
+      return c;
+    });
 
-    const verification = verifyDeliveryCode(cleanCode, codeRecord, currentMonth);
+    const codeRecord = codes.find((c) => {
+      const codeNorm = (c.code || '').replace(/\s+/g, '').toLowerCase();
+      if (codeNorm === rawClean) return true;
+      if (/^\d{6}$/.test(rawClean) && codeNorm.endsWith(rawClean)) return true;
+      return false;
+    });
+
+    const verification = verifyDeliveryCode(rawClean, codeRecord, currentMonth);
     if (!verification.isValid) {
       return { isValid: false, error: verification.errorMessageArabic };
     }
@@ -1139,6 +1321,17 @@ class DataService {
     const authCheck = canAuthorizeDelivery(beneficiary.pointsBalance, params.items);
     if (!authCheck.canAuthorize) {
       return { success: false, error: authCheck.errorMessageArabic };
+    }
+
+    // 2b. Enforce product quantity limits based on beneficiary family size
+    for (const item of params.items) {
+      const maxLimit = this.getProductLimit(item.productId, beneficiary.familySize);
+      if (maxLimit !== null && item.quantity > maxLimit) {
+        return {
+          success: false,
+          error: `تجاوزت الكمية المسموحة للصنف (${item.productName}). الحد الأقصى لأسرة مكونة من ${beneficiary.familySize} أفراد هو ${maxLimit} قطع فقط.`,
+        };
+      }
     }
 
     const totalPoints = params.items.reduce(
@@ -1361,6 +1554,36 @@ class DataService {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  }
+
+  // ================= Association Settings =================
+  getAssociationPhone(): string {
+    const settings = this.getStorage<{ phone: string }>(STORAGE_KEYS.SETTINGS, {
+      phone: '01012345678',
+    });
+    return settings.phone || '01012345678';
+  }
+
+  updateAssociationPhone(phone: string): { success: boolean; error?: string } {
+    const cleanPhone = (phone || '').trim();
+    if (!cleanPhone) {
+      return { success: false, error: 'رقم هاتف الجمعية مطلوب' };
+    }
+    this.setStorage(STORAGE_KEYS.SETTINGS, { phone: cleanPhone });
+
+    const current = this.getCurrentUser();
+    if (current) {
+      this.recordAuditLog({
+        action: 'STAFF_TOGGLE',
+        actorId: current.id,
+        actorName: current.fullName,
+        actorRole: current.role,
+        targetName: 'إعدادات الفاتورة',
+        details: `تحديث رقم هاتف الجمعية المطبوع على الفاتورة إلى: ${cleanPhone}`,
+      });
+    }
+
+    return { success: true };
   }
 }
 
