@@ -105,7 +105,13 @@ export default function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
         inactivitySecondsRemaining={inactivitySecondsRemaining}
-        onOpenMobileMenu={() => setIsMobileDrawerOpen((prev) => !prev)}
+        onOpenMobileMenu={() => {
+          if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+            setIsSidebarCollapsed((prev) => !prev);
+          } else {
+            setIsMobileDrawerOpen((prev) => !prev);
+          }
+        }}
       />
 
       {/* Main Body Layout: Sidebar + Content */}

@@ -335,22 +335,22 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
 
   const content = (
     <div
-      className={`w-full max-w-2xl bg-[#161D1A] border border-[#26312C] rounded-2xl shadow-2xl overflow-hidden flex flex-col ${
-        isInline ? 'mx-auto my-4' : 'max-h-[95vh]'
+      className={`w-full max-w-2xl bg-[#161D1A] border border-[#26312C] rounded-2xl shadow-2xl flex flex-col ${
+        isInline ? 'mx-auto my-2 sm:my-4' : 'my-auto sm:max-h-[90vh] sm:overflow-hidden'
       }`}
     >
       {/* Top Bar (Hidden in Print) */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-[#26312C] bg-[#1C2521] no-print">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[#34C38F]/20 text-[#34C38F] flex items-center justify-center flex-shrink-0">
-            <Receipt className="w-4 h-4" />
+      <div className="flex-shrink-0 flex items-center justify-between px-3.5 sm:px-6 py-2.5 sm:py-3 border-b border-[#26312C] bg-[#1C2521] no-print">
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#34C38F]/20 text-[#34C38F] flex items-center justify-center flex-shrink-0">
+            <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
           <div>
-            <h2 className="text-sm sm:text-base font-bold text-[#E8EDEA]">
+            <h2 className="text-xs sm:text-base font-bold text-[#E8EDEA]">
               {isNewDeliverySuccess ? 'فاتورة تسليم الحصة التموينية' : 'استعراض فاتورة التسليم'}
             </h2>
-            <span className="text-[11px] text-[#8A9690]">
-              كود الاستلام: {delivery.deliveryCode} • رقم الفاتورة: #{delivery.id.slice(0, 8).toUpperCase()}
+            <span className="text-[10px] sm:text-[11px] text-[#8A9690] block sm:inline">
+              كود: <span className="font-mono text-[#34C38F] font-bold">{delivery.deliveryCode}</span> • رقم: #{delivery.id.slice(0, 8).toUpperCase()}
             </span>
           </div>
         </div>
@@ -371,8 +371,8 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
 
       {/* Success Notification Bar if newly delivered */}
       {isNewDeliverySuccess && (
-        <div className="bg-[#34C38F]/15 border-b border-[#34C38F]/30 px-4 sm:px-6 py-2.5 flex items-center justify-between text-xs text-[#34C38F] no-print">
-          <div className="flex items-center gap-2 font-bold">
+        <div className="flex-shrink-0 bg-[#34C38F]/15 border-b border-[#34C38F]/30 px-3.5 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between text-xs text-[#34C38F] no-print">
+          <div className="flex items-center gap-2 font-bold text-[11px] sm:text-xs">
             <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
             <span>تم تأكيد التسليم بنجاح وإصدار الفاتورة الرسمية</span>
           </div>
@@ -382,8 +382,12 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
         </div>
       )}
 
-      {/* Scrollable Printable Area Container */}
-      <div className="p-3 sm:p-6 overflow-y-auto flex-1 flex justify-center bg-[#0F1412]">
+      {/* Printable Area Container (full continuous view on mobile, smooth overflow on desktop) */}
+      <div
+        className={`p-1.5 sm:p-4 md:p-6 flex justify-center bg-[#0F1412] w-full ${
+          isInline ? '' : 'sm:overflow-y-auto sm:flex-1 sm:overscroll-contain sm:min-h-0'
+        }`}
+      >
         {/*
           THE INVOICE
           Layout strictly per specification:
@@ -408,12 +412,12 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
         <div
           id="charity-receipt"
           ref={invoiceRef}
-          className="w-full max-w-[480px] bg-white text-black p-5 sm:p-7 rounded-xl shadow-lg border border-gray-200 transition-all font-['Cairo',sans-serif] select-text print-thermal-58"
+          className="w-full max-w-[480px] bg-white text-black p-3 sm:p-6 md:p-7 rounded-xl shadow-lg border border-gray-200 transition-all font-['Cairo',sans-serif] select-text print-thermal-58 box-border"
           style={{ color: '#000000', backgroundColor: '#ffffff' }}
         >
           {/* 1. Header: "جمعية عطاء الخيرية" as the ONLY title */}
-          <div className="text-center pb-2.5 space-y-1">
-            <h1 className="text-xl sm:text-2xl font-black text-black tracking-wide">
+          <div className="text-center pb-2 sm:pb-2.5 space-y-0.5 sm:space-y-1">
+            <h1 className="text-lg sm:text-2xl font-black text-black tracking-wide">
               جمعية عطاء الخيرية
             </h1>
 
@@ -453,7 +457,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                   type="text"
                   value={newPhoneInput}
                   onChange={(e) => setNewPhoneInput(e.target.value)}
-                  className="px-2 py-0.5 text-xs border border-gray-400 rounded w-28 text-center font-mono"
+                  className="px-2 py-0.5 text-xs border border-gray-400 rounded w-28 text-center font-mono text-black bg-white"
                   placeholder="رقم الهاتف"
                   autoFocus
                 />
@@ -476,81 +480,81 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             )}
           </div>
 
-          <div className="border-t border-gray-300 my-2.5"></div>
+          <div className="border-t border-gray-300 my-2 sm:my-2.5"></div>
 
           {/* 4. Details Block (Plain text, NO colored boxes, NO black boxes) */}
-          <div className="space-y-1.5 text-xs sm:text-[13px] text-gray-700">
-            <div className="flex justify-between items-center">
-              <span>رقم الفاتورة:</span>
-              <span className="font-mono text-black font-semibold">
+          <div className="space-y-1.5 text-xs sm:text-[13px] text-gray-800">
+            <div className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-1 sm:gap-2 py-0.5">
+              <span className="text-gray-600 flex-shrink-0 text-[11px] sm:text-xs">رقم الفاتورة:</span>
+              <span className="font-mono font-semibold text-black text-[11px] sm:text-xs text-left">
                 #{delivery.id.slice(0, 10).toUpperCase()}
               </span>
             </div>
 
-            <div className="flex justify-between items-center">
-              <span>التاريخ والوقت:</span>
-              <span className="font-mono text-black">
+            <div className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-1 sm:gap-2 py-0.5">
+              <span className="text-gray-600 flex-shrink-0 text-[11px] sm:text-xs">التاريخ والوقت:</span>
+              <span className="font-mono text-black dir-ltr text-[11px] sm:text-xs text-left">
                 {formattedDateTime}
               </span>
             </div>
 
-            <div className="flex justify-between items-center">
-              <span>اسم المستفيد:</span>
-              <strong className="text-black font-bold">
+            <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-1 sm:gap-2 py-0.5">
+              <span className="text-gray-600 flex-shrink-0 text-[11px] sm:text-xs">اسم المستفيد:</span>
+              <strong className="text-black font-bold text-[11px] sm:text-xs text-left break-words">
                 {delivery.beneficiaryName}
               </strong>
             </div>
 
-            <div className="flex justify-between items-center">
-              <span>رقم الهاتف:</span>
-              <span className="font-mono text-black">
+            <div className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-1 sm:gap-2 py-0.5">
+              <span className="text-gray-600 flex-shrink-0 text-[11px] sm:text-xs">رقم الهاتف:</span>
+              <span className="font-mono text-black text-[11px] sm:text-xs text-left">
                 {delivery.beneficiaryPhone}
               </span>
             </div>
 
             {/* كود الاستلام: Normal bold text. NO black rectangle or any box around it */}
-            <div className="flex justify-between items-center">
-              <span>كود الاستلام:</span>
-              <span className="font-mono font-bold text-black text-sm">
+            <div className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-1 sm:gap-2 py-0.5">
+              <span className="text-gray-600 flex-shrink-0 text-[11px] sm:text-xs">كود الاستلام:</span>
+              <span className="font-mono font-bold text-black text-xs sm:text-sm tracking-wide text-left">
                 {delivery.deliveryCode}
               </span>
             </div>
 
             {/* مسؤول الصرف: show the staff member's name ONLY. No job title, no "المدير العام", no extra words */}
-            <div className="flex justify-between items-center">
-              <span>مسؤول الصرف:</span>
-              <span className="text-black font-semibold">
+            <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-1 sm:gap-2 py-0.5">
+              <span className="text-gray-600 flex-shrink-0 text-[11px] sm:text-xs">مسؤول الصرف:</span>
+              <span className="text-black font-semibold text-[11px] sm:text-xs text-left break-words">
                 {cleanStaffName}
               </span>
             </div>
           </div>
 
-          <div className="border-t border-gray-300 my-2.5"></div>
+          <div className="border-t border-gray-300 my-2 sm:my-2.5"></div>
 
           {/* 5. Items Table: الصنف, السعر, الكمية, الإجمالي. Plain numbers without any symbol or unit */}
-          <div className="py-1">
-            <table className="w-full text-right text-xs border-collapse">
+          <div className="py-1 w-full overflow-x-auto">
+            <table className="w-full text-right text-xs border-collapse table-fixed">
               <thead>
-                <tr className="border-b border-gray-400 text-black font-bold text-[11px] sm:text-xs">
-                  <th className="pb-1.5 text-right font-bold">الصنف</th>
-                  <th className="pb-1.5 text-center font-bold">السعر</th>
-                  <th className="pb-1.5 text-center font-bold">الكمية</th>
-                  <th className="pb-1.5 text-left font-bold">الإجمالي</th>
+                <tr className="border-b border-gray-400 text-black font-bold text-[10px] sm:text-xs">
+                  <th className="pb-1.5 text-right font-bold w-[40%] pr-0.5">الصنف</th>
+                  <th className="pb-1.5 text-center font-bold w-[20%]">السعر</th>
+                  <th className="pb-1.5 text-center font-bold w-[18%]">الكمية</th>
+                  <th className="pb-1.5 text-left font-bold w-[22%] pl-0.5">الإجمالي</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 text-black">
                 {delivery.items.map((item, index) => (
                   <tr key={item.id || index}>
-                    <td className="py-1.5 text-right font-medium text-gray-900">
+                    <td className="py-1.5 text-right font-medium text-gray-900 break-words leading-tight text-[10px] sm:text-xs pr-0.5">
                       {item.productName}
                     </td>
-                    <td className="py-1.5 text-center font-mono">
+                    <td className="py-1.5 text-center font-mono text-[10px] sm:text-xs">
                       {item.unitPoints}
                     </td>
-                    <td className="py-1.5 text-center font-mono font-bold">
+                    <td className="py-1.5 text-center font-mono font-bold text-[10px] sm:text-xs">
                       {item.quantity}
                     </td>
-                    <td className="py-1.5 text-left font-mono font-bold">
+                    <td className="py-1.5 text-left font-mono font-bold text-[10px] sm:text-xs pl-0.5">
                       {item.subtotalPoints}
                     </td>
                   </tr>
@@ -559,41 +563,41 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             </table>
           </div>
 
-          <div className="border-t border-gray-300 my-2.5"></div>
+          <div className="border-t border-gray-300 my-2 sm:my-2.5"></div>
 
           {/* 6. Totals */}
           <div className="space-y-1.5 text-xs sm:text-[13px]">
             {/* قيمة القسيمة (رصيد الأسرة) */}
-            <div className="flex justify-between items-center text-gray-700">
-              <span>قيمة القسيمة (رصيد الأسرة):</span>
-              <span className="font-mono text-black font-semibold">
+            <div className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-1 sm:gap-2 text-gray-700">
+              <span className="text-[11px] sm:text-xs flex-shrink-0">قيمة القسيمة (رصيد الأسرة):</span>
+              <span className="font-mono text-black font-semibold text-xs sm:text-sm">
                 {voucherValue}
               </span>
             </div>
 
             {/* إجمالي الفاتورة (المصروف) as the emphasized line */}
-            <div className="flex justify-between items-center py-1 text-black font-extrabold text-sm sm:text-base border-y border-gray-300">
-              <span>إجمالي الفاتورة (المصروف):</span>
-              <span className="font-mono text-base sm:text-lg">
+            <div className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-1 sm:gap-2 py-1.5 text-black font-extrabold text-xs sm:text-base border-y border-gray-300">
+              <span className="flex-shrink-0">إجمالي الفاتورة (المصروف):</span>
+              <span className="font-mono text-sm sm:text-lg">
                 {invoiceTotal}
               </span>
             </div>
 
             {/* النقاط المتبقية */}
-            <div className="flex justify-between items-center text-gray-700">
-              <span>النقاط المتبقية:</span>
-              <span className="font-mono text-black font-semibold">
+            <div className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-1 sm:gap-2 text-gray-700">
+              <span className="text-[11px] sm:text-xs flex-shrink-0">النقاط المتبقية:</span>
+              <span className="font-mono text-black font-semibold text-xs sm:text-sm">
                 {remainingPoints}
               </span>
             </div>
           </div>
 
           {/* 7. Short note under the totals */}
-          <div className="pt-3 text-center text-[10px] sm:text-[11px] text-gray-500">
+          <div className="pt-2.5 sm:pt-3 text-center text-[10px] sm:text-[11px] text-gray-500 leading-snug">
             النقاط المتبقية تنتهي صلاحيتها بعد التسليم ولا ترحل للشهر القادم
           </div>
 
-          <div className="border-t border-gray-300 my-2.5"></div>
+          <div className="border-t border-gray-300 my-2 sm:my-2.5"></div>
 
           {/* 8. Bottom: ONLY this line */}
           <div className="text-center text-[11px] sm:text-xs text-gray-700 font-medium">
@@ -603,13 +607,13 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
       </div>
 
       {/* Footer Buttons (Hidden in Print) */}
-      <div className="p-3 sm:p-5 border-t border-[#26312C] bg-[#1C2521] flex flex-col sm:flex-row items-center justify-between gap-3 no-print">
+      <div className="flex-shrink-0 p-3 sm:p-5 border-t border-[#26312C] bg-[#1C2521] flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3 no-print">
         <div className="flex items-center gap-2 w-full sm:w-auto">
           {/* Print Button */}
           <button
             type="button"
             onClick={handlePrint}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] text-[#0F1412] text-xs font-bold transition shadow-md cursor-pointer active:scale-95"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] text-[#0F1412] text-xs font-bold transition shadow-md cursor-pointer active:scale-95 min-h-[40px]"
           >
             <Printer className="w-4 h-4" />
             <span>طباعة</span>
@@ -620,7 +624,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             type="button"
             onClick={handleSaveAsImage}
             disabled={isExporting}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#161D1A] border border-[#26312C] hover:border-[#34C38F]/50 hover:bg-[#26312C] text-[#E8EDEA] text-xs font-semibold transition cursor-pointer disabled:opacity-50"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-[#161D1A] border border-[#26312C] hover:border-[#34C38F]/50 hover:bg-[#26312C] text-[#E8EDEA] text-xs font-semibold transition cursor-pointer disabled:opacity-50 min-h-[40px]"
           >
             <Download className="w-4 h-4 text-[#34C38F]" />
             <span>{isExporting ? 'جاري التصدير...' : exportSuccess ? 'تم الحفظ كصورة بنجاح!' : 'حفظ كصورة'}</span>
@@ -632,7 +636,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             <button
               type="button"
               onClick={onNewDelivery}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#1C2521] border border-[#34C38F]/40 text-[#34C38F] hover:bg-[#34C38F]/10 text-xs font-bold transition cursor-pointer text-center"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#1C2521] border border-[#34C38F]/40 text-[#34C38F] hover:bg-[#34C38F]/10 text-xs font-bold transition cursor-pointer text-center min-h-[40px]"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>تسليم حصة جديدة</span>
@@ -643,7 +647,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-[#161D1A] hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] text-xs font-medium transition cursor-pointer text-center"
+              className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-[#161D1A] hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] text-xs font-medium transition cursor-pointer text-center min-h-[40px]"
             >
               إغلاق
             </button>
@@ -658,15 +662,15 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
     return content;
   }
 
-  // If modal (inside LogsView), render through portal to document.body
+  // If modal (inside LogsView), render through portal to document.body with proper full-height scrolling
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-2 sm:p-4 overflow-y-auto animate-fade-in no-print-backdrop">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 p-2 sm:p-4 animate-fade-in no-print-backdrop">
       <div
         className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative z-10 w-full flex justify-center">
+      <div className="relative z-10 min-h-full flex items-center justify-center py-2 sm:py-6">
         {content}
       </div>
     </div>,

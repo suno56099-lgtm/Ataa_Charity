@@ -125,31 +125,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Desktop & Tablet Sidebar */}
+      {/* Desktop & Tablet Floating Compact Sidebar with Rounded Edges */}
       <aside
-        className={`hidden md:flex flex-col bg-[#161D1A] border-l border-[#26312C] transition-all duration-300 z-30 select-none flex-shrink-0 ${
-          isCollapsed ? 'w-20' : 'w-64'
+        className={`hidden md:flex flex-col my-3.5 mr-3 mb-3.5 bg-[#161D1A]/95 border border-[#26312C] rounded-2xl lg:rounded-3xl shadow-xl shadow-black/40 backdrop-blur-md transition-all duration-300 z-30 select-none flex-shrink-0 overflow-hidden ${
+          isCollapsed ? 'w-14' : 'w-44 lg:w-48'
         }`}
       >
         {/* Toggle Collapse Button */}
-        <div className="flex items-center justify-between p-4 border-b border-[#26312C]">
+        <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#26312C]/80">
           {!isCollapsed && (
-            <span className="text-xs font-semibold text-[#8A9690] tracking-wider uppercase">
+            <span className="text-[10px] font-bold text-[#8A9690] tracking-wider uppercase px-1">
               أقسام المنظومة
             </span>
           )}
           <button
             onClick={onToggleCollapse}
-            className="p-1.5 rounded-xl hover:bg-[#1C2521] text-[#8A9690] hover:text-[#E8EDEA] transition mx-auto md:mx-0 cursor-pointer"
+            className="p-1 rounded-lg hover:bg-[#1C2521] text-[#8A9690] hover:text-[#E8EDEA] transition mx-auto md:mx-0 cursor-pointer"
             aria-label={isCollapsed ? 'توسيع القائمة الجانبية' : 'طي القائمة الجانبية'}
             title={isCollapsed ? 'توسيع القائمة' : 'طي القائمة'}
           >
-            {isCollapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            {isCollapsed ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
           </button>
         </div>
 
         {/* Navigation List */}
-        <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto">
+        <nav className="flex-1 p-1.5 space-y-0.5 overflow-y-auto">
           {visibleItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -157,19 +157,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={item.id}
                 onClick={() => handleSelectTab(item.id)}
-                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+                className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer ${
                   isActive
-                    ? 'bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-semibold shadow-sm'
-                    : 'text-[#8A9690] hover:text-[#E8EDEA] hover:bg-[#1C2521]'
-                }`}
+                    ? 'bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-bold shadow-sm'
+                    : 'text-[#8A9690] hover:text-[#E8EDEA] hover:bg-[#1C2521] border border-transparent hover:translate-x-[-1px]'
+                } ${isCollapsed ? 'justify-center px-0' : ''}`}
                 title={isCollapsed ? item.label : undefined}
               >
-                <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[#34C38F]' : 'text-[#8A9690]'}`} />
+                <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-[#34C38F]' : 'text-[#8A9690]'}`} />
                 {!isCollapsed && (
-                  <div className="flex-1 flex items-center justify-between text-right">
-                    <span className="truncate">{item.label}</span>
+                  <div className="flex-1 flex items-center justify-between text-right min-w-0">
+                    <span className="truncate text-xs">{item.shortLabel || item.label}</span>
                     {item.badge && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#E0B35A]/20 text-[#E0B35A] font-bold flex-shrink-0">
+                      <span className="text-[9px] px-1 py-0.2 rounded-full bg-[#E0B35A]/20 text-[#E0B35A] font-bold flex-shrink-0 mr-1">
                         {item.badge}
                       </span>
                     )}
@@ -182,17 +182,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Association Footer Note */}
         {!isCollapsed && (
-          <div className="p-4 border-t border-[#26312C] text-center space-y-1">
-            <div className="text-xs font-bold text-[#E8EDEA]">جمعية عطاء الخيرية</div>
-            <div className="text-[10px] text-[#8A9690]">خدمة أهالي قرية النسايمة</div>
-            <div className="text-[10px] text-[#E0B35A]">منفذ التوزيع: مقر الجمعية الرئيسي بالقرية</div>
+          <div className="p-2.5 border-t border-[#26312C]/80 text-center space-y-0.5 bg-[#121815]/50">
+            <div className="text-[11px] font-bold text-[#E8EDEA] truncate">جمعية عطاء الخيرية</div>
+            <div className="text-[9px] text-[#8A9690] truncate">قرية النسايمة</div>
           </div>
         )}
       </aside>
 
-      {/* Slide-over Drawer from the RIGHT */}
+      {/* Slide-over Drawer from the RIGHT: Floating rounded card */}
       {isMobileDrawerOpen && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-50 animate-fade-in">
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-[#0F1412]/80 backdrop-blur-sm transition-opacity"
@@ -200,12 +199,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             aria-hidden="true"
           />
 
-          {/* Drawer Sheet anchored to the RIGHT */}
-          <div className="fixed top-0 bottom-0 right-0 w-full max-w-xs sm:max-w-sm bg-[#161D1A] border-l border-[#26312C] h-full shadow-2xl flex flex-col z-50 animate-fade-in">
+          {/* Drawer Sheet: Floating rounded card anchored on the right */}
+          <div className="fixed top-2 bottom-2 right-2 w-[calc(100%-1rem)] max-w-xs sm:max-w-sm bg-[#161D1A]/98 border border-[#26312C] rounded-3xl shadow-2xl flex flex-col z-50 overflow-hidden backdrop-blur-xl">
             {/* Drawer Header */}
             <div className="p-4 border-b border-[#26312C] flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#34C38F] to-[#10B981] flex items-center justify-center text-[#0F1412]">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#34C38F] to-[#10B981] flex items-center justify-center text-[#0F1412] shadow-md shadow-[#34C38F]/20">
                   <HeartHandshake className="w-5 h-5" />
                 </div>
                 <div>
@@ -234,10 +233,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     key={item.id}
                     onClick={() => handleSelectTab(item.id)}
-                    className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition text-right cursor-pointer ${
+                    className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs sm:text-sm font-medium transition-all text-right cursor-pointer ${
                       isActive
-                        ? 'bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-bold'
-                        : 'text-[#8A9690] hover:text-[#E8EDEA] hover:bg-[#1C2521]'
+                        ? 'bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-bold shadow-sm'
+                        : 'text-[#8A9690] hover:text-[#E8EDEA] hover:bg-[#1C2521] border border-transparent'
                     }`}
                   >
                     <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[#34C38F]' : 'text-[#8A9690]'}`} />
@@ -254,7 +253,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {/* Drawer Village Notice */}
-            <div className="p-4 border-t border-[#26312C] bg-[#121815] space-y-1 text-center">
+            <div className="p-3.5 border-t border-[#26312C] bg-[#121815]/80 space-y-1 text-center">
               <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-[#34C38F]">
                 <MapPin className="w-3.5 h-3.5" />
                 <span>منفذ توزيع قرية النسايمة</span>
@@ -267,57 +266,57 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      {/* Mobile Bottom Navigation Bar without 'المزيد' button */}
+      {/* Mobile Floating Bottom Navigation Bar */}
       <nav
         aria-label="شريط التنقل السفلي للهواتف"
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#161D1A]/95 border-t border-[#26312C] backdrop-blur-lg px-4 pt-1.5 pb-safe flex items-center justify-around shadow-2xl"
+        className="md:hidden fixed bottom-2.5 left-2.5 right-2.5 z-40 bg-[#161D1A]/95 border border-[#26312C] rounded-2xl backdrop-blur-xl px-2 py-1.5 flex items-center justify-around shadow-2xl shadow-black/50"
       >
         {/* 1. Dashboard */}
         <button
           onClick={() => handleSelectTab('dashboard')}
-          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition cursor-pointer min-w-[64px] ${
-            activeTab === 'dashboard' ? 'text-[#34C38F]' : 'text-[#8A9690] hover:text-[#E8EDEA]'
+          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition cursor-pointer min-w-[60px] active:scale-95 ${
+            activeTab === 'dashboard' ? 'text-[#34C38F] font-bold' : 'text-[#8A9690] hover:text-[#E8EDEA]'
           }`}
           title="الرئيسية"
         >
-          <LayoutDashboard className="w-5 h-5" />
-          <span className="text-[10px] mt-1 font-semibold">الرئيسية</span>
+          <LayoutDashboard className="w-4.5 h-4.5" />
+          <span className="text-[10px] mt-0.5">الرئيسية</span>
         </button>
 
         {/* 2. Beneficiaries */}
         <button
           onClick={() => handleSelectTab('beneficiaries')}
-          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition cursor-pointer min-w-[64px] ${
-            activeTab === 'beneficiaries' ? 'text-[#34C38F]' : 'text-[#8A9690] hover:text-[#E8EDEA]'
+          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition cursor-pointer min-w-[60px] active:scale-95 ${
+            activeTab === 'beneficiaries' ? 'text-[#34C38F] font-bold' : 'text-[#8A9690] hover:text-[#E8EDEA]'
           }`}
           title="المستفيدون"
         >
-          <Users className="w-5 h-5" />
-          <span className="text-[10px] mt-1 font-semibold">المستفيدين</span>
+          <Users className="w-4.5 h-4.5" />
+          <span className="text-[10px] mt-0.5">المستفيدين</span>
         </button>
 
         {/* 3. Products */}
         <button
           onClick={() => handleSelectTab('products')}
-          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition cursor-pointer min-w-[64px] ${
-            activeTab === 'products' ? 'text-[#34C38F]' : 'text-[#8A9690] hover:text-[#E8EDEA]'
+          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition cursor-pointer min-w-[60px] active:scale-95 ${
+            activeTab === 'products' ? 'text-[#34C38F] font-bold' : 'text-[#8A9690] hover:text-[#E8EDEA]'
           }`}
           title="السلع التموينية"
         >
-          <Package className="w-5 h-5" />
-          <span className="text-[10px] mt-1 font-semibold">السلع</span>
+          <Package className="w-4.5 h-4.5" />
+          <span className="text-[10px] mt-0.5">السلع</span>
         </button>
 
         {/* 4. Delivery (Highlight action) */}
         <button
           onClick={() => handleSelectTab('delivery')}
-          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition cursor-pointer min-w-[64px] relative ${
-            activeTab === 'delivery' ? 'text-[#34C38F]' : 'text-[#8A9690] hover:text-[#E8EDEA]'
+          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition cursor-pointer min-w-[60px] relative active:scale-95 ${
+            activeTab === 'delivery' ? 'text-[#34C38F] font-bold' : 'text-[#8A9690] hover:text-[#E8EDEA]'
           }`}
           title="صرف وتسليم"
         >
-          <ShoppingBag className="w-5 h-5" />
-          <span className="text-[10px] mt-1 font-semibold">الصرف</span>
+          <ShoppingBag className="w-4.5 h-4.5" />
+          <span className="text-[10px] mt-0.5">الصرف</span>
         </button>
       </nav>
     </>

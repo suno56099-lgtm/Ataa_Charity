@@ -83,6 +83,16 @@ export const LogsView: React.FC<LogsViewProps> = ({ deliveries, auditLogs }) => 
             <span>تسجيل دخول/خروج</span>
           </span>
         );
+      case 'STAFF_CREATE':
+      case 'STAFF_UPDATE':
+      case 'STAFF_TOGGLE':
+      case 'STAFF_RESET_PWD':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-semibold text-[11px]">
+            <UserCheck className="w-3 h-3" />
+            <span>إدارة الموظفين</span>
+          </span>
+        );
       default:
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#1C2521] text-[#8A9690] border border-[#26312C] font-semibold text-[11px]">

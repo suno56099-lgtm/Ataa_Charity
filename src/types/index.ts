@@ -13,6 +13,8 @@ export interface StaffAccount {
   isActive: boolean;
   createdAt: string;
   lastLoginAt?: string;
+  phone?: string;
+  nationalId?: string;
 }
 
 export interface Beneficiary {
@@ -115,6 +117,7 @@ export type AuditActionType =
   | 'PRODUCT_DELETE'
   | 'POINTS_TIERS_UPDATE'
   | 'STAFF_CREATE'
+  | 'STAFF_UPDATE'
   | 'STAFF_TOGGLE'
   | 'STAFF_RESET_PWD'
   | 'STAFF_LOGIN'

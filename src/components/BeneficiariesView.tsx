@@ -214,7 +214,7 @@ export const BeneficiariesView: React.FC<BeneficiariesViewProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-[#34C38F]" />
-            <h1 className="text-xl font-bold text-[#E8EDEA]">سجل المستفيدين والأسر المستحقة</h1>
+            <h1 className="text-xl font-bold text-[#E8EDEA]">سجل المستفيدين</h1>
           </div>
           <p className="text-xs text-[#8A9690] mt-1">
             سجل الأسر المستحقة بقرية النسايمة، حجب الرقم القومي للخصوصية، وإدارة أرصدة نقاط السلع التموينية.
@@ -222,8 +222,9 @@ export const BeneficiariesView: React.FC<BeneficiariesViewProps> = ({
         </div>
 
         <button
+          type="button"
           onClick={openAddModal}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#34C38F] text-[#0F1412] font-bold text-sm shadow-md hover:bg-[#2bb27f] active:scale-95 transition"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#34C38F] text-[#0F1412] font-bold text-sm shadow-md hover:bg-[#2bb27f] active:scale-95 transition cursor-pointer w-full sm:w-auto"
         >
           <Plus className="w-4 h-4" />
           <span>إضافة مستفيد جديد</span>
@@ -252,13 +253,13 @@ export const BeneficiariesView: React.FC<BeneficiariesViewProps> = ({
 
       {/* Beneficiaries Table */}
       <div className="bg-[#161D1A] border border-[#26312C] rounded-2xl p-5 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-2 border-b border-[#26312C]/60">
           <span className="text-xs text-[#8A9690]">
             عدد النتائج: <strong className="text-[#E8EDEA]">{filteredList.length}</strong> مستفيد
           </span>
-          <div className="flex items-center gap-2 text-[11px] text-[#8A9690]">
-            <ShieldAlert className="w-3.5 h-3.5 text-[#E0B35A]" />
-            <span>يتم تسجيل كل عملية كشف للرقم القومي في سجل التدقيق الأمني</span>
+          <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-[#8A9690]">
+            <ShieldAlert className="w-3.5 h-3.5 text-[#E0B35A] flex-shrink-0" />
+            <span>تسجيل كشف الأرقام القومية موثق أمنياً</span>
           </div>
         </div>
 

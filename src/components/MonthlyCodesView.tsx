@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   KeyRound,
   Calendar,
@@ -11,6 +11,8 @@ import {
   AlertTriangle,
   X,
   Server,
+  Search,
+  Filter,
 } from 'lucide-react';
 import { MonthlyCode } from '../types/index.ts';
 import { dataService } from '../services/dataService.ts';
@@ -23,6 +25,8 @@ interface MonthlyCodesViewProps {
 export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh }) => {
   const [selectedMonth, setSelectedMonth] = useState('2026-10');
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'used'>('all');
 
   const [notification, setNotification] = useState<{
     type: 'success' | 'error';
@@ -35,6 +39,21 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
   const [bulkProgress, setBulkProgress] = useState<{ sent: number; total: number } | null>(null);
 
   const codes = dataService.getMonthlyCodes(selectedMonth);
+
+  // Filtered codes based on search and status
+  const filteredCodes = useMemo(() => {
+    return codes.filter((c) => {
+      if (statusFilter === 'available' && c.status !== 'available') return false;
+      if (statusFilter === 'used' && c.status !== 'used') return false;
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.trim().toLowerCase();
+      return (
+        c.beneficiaryName.toLowerCase().includes(q) ||
+        c.beneficiaryPhone.includes(q) ||
+        c.code.toLowerCase().includes(q)
+      );
+    });
+  }, [codes, statusFilter, searchQuery]);
 
   // Copy code helper
   const handleCopyCode = (id: string, code: string) => {
@@ -101,28 +120,28 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 sm:space-y-6 animate-fade-in w-full max-w-full overflow-hidden">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#161D1A] border border-[#26312C] rounded-2xl p-5 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 bg-[#161D1A] border border-[#26312C] rounded-2xl p-4 sm:p-5 shadow-sm">
         <div>
           <div className="flex items-center gap-2">
-            <KeyRound className="w-5 h-5 text-[#E0B35A]" />
-            <h1 className="text-xl font-bold text-[#E8EDEA]">الأكواد الشهرية الأحادية (OTP)</h1>
+            <KeyRound className="w-5 h-5 text-[#E0B35A] flex-shrink-0" />
+            <h1 className="text-lg sm:text-xl font-bold text-[#E8EDEA]">الأكواد الشهرية الأحادية (OTP)</h1>
           </div>
-          <p className="text-xs text-[#8A9690] mt-1">
-            توليد كود أمان عشوائي مكون من 6 أرقام لكل مستفيد شهرياً، مع إرسال الرسائل النصية القصيرة SMS.
+          <p className="text-[11px] sm:text-xs text-[#8A9690] mt-1">
+            أكواد استلام موثقة ومؤمنة لكل مستفيد شهرياً مع إمكانية إرسال رسائل SMS.
           </p>
         </div>
 
-        {/* Month Selector & Actions */}
-        <div className="flex flex-wrap items-center gap-3">
+        {/* Month Selector & Action Buttons */}
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-2.5 w-full md:w-auto">
           <div className="flex items-center gap-2 bg-[#1C2521] border border-[#26312C] rounded-xl px-3 py-2 text-xs">
-            <Calendar className="w-4 h-4 text-[#34C38F]" />
-            <span className="text-[#8A9690]">الشهر:</span>
+            <Calendar className="w-4 h-4 text-[#34C38F] flex-shrink-0" />
+            <span className="text-[#8A9690] flex-shrink-0">الشهر:</span>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="bg-transparent text-[#E8EDEA] font-semibold focus:outline-none"
+              className="bg-transparent text-[#E8EDEA] font-semibold focus:outline-none flex-1 text-xs"
             >
               <option value="2026-10">أكتوبر 2026 (الحالي)</option>
               <option value="2026-11">نوفمبر 2026</option>
@@ -133,17 +152,17 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
 
           <button
             onClick={handleGenerateCodes}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#34C38F] text-[#0F1412] font-bold text-xs shadow-md hover:bg-[#2bb27f] active:scale-95 transition"
+            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#34C38F] text-[#0F1412] font-bold text-xs shadow-md hover:bg-[#2bb27f] active:scale-95 transition cursor-pointer"
           >
-            <Sparkles className="w-4 h-4" />
+            <Sparkles className="w-4 h-4 flex-shrink-0" />
             <span>توليد الأكواد لجميع المستفيدين</span>
           </button>
 
           <button
             onClick={() => setIsBulkSmsOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-[#E0B35A] text-xs font-semibold transition"
+            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-[#E0B35A] text-xs font-semibold transition cursor-pointer"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-4 h-4 flex-shrink-0" />
             <span>إرسال للجميع (بوابة SMS)</span>
           </button>
         </div>
@@ -152,7 +171,7 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
       {/* Notifications */}
       {notification && (
         <div
-          className={`p-3.5 rounded-xl border text-xs flex items-center gap-2 animate-fade-in ${
+          className={`p-3 rounded-xl border text-xs flex items-center gap-2 animate-fade-in ${
             notification.type === 'success'
               ? 'bg-[#34C38F]/15 border-[#34C38F]/30 text-[#34C38F]'
               : 'bg-[#F0707A]/15 border-[#F0707A]/30 text-[#F0707A]'
@@ -167,18 +186,70 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
         </div>
       )}
 
-      {/* Codes Table Card */}
-      <div className="bg-[#161D1A] border border-[#26312C] rounded-2xl p-5 shadow-sm">
-        <div className="flex items-center justify-between mb-4 text-xs">
-          <span className="text-[#8A9690]">
+      {/* Codes Container Card */}
+      <div className="bg-[#161D1A] border border-[#26312C] rounded-2xl p-3.5 sm:p-5 shadow-sm space-y-3.5">
+        {/* Stats & Search Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+          <div className="text-[#8A9690] leading-relaxed">
             أكواد شهر <strong className="text-[#E8EDEA]">{formatMonthArabic(selectedMonth)}</strong> •{' '}
             إجمالي: <strong className="text-[#34C38F]">{codes.length}</strong> كود (
-            {codes.filter((c) => c.status === 'used').length} تم الصرف،{' '}
-            {codes.filter((c) => c.status === 'available').length} متاح)
-          </span>
-          <span className="text-[11px] text-[#8A9690] hidden sm:block">
-            قيد فريد: كود واحد لكل مستفيد شهرياً
-          </span>
+            <span className="text-[#34C38F] font-bold">{codes.filter((c) => c.status === 'used').length} تم</span>،{' '}
+            <span className="text-[#E0B35A] font-bold">{codes.filter((c) => c.status === 'available').length} متاح</span>)
+          </div>
+
+          {/* Status Filter Buttons */}
+          <div className="flex items-center gap-1.5 self-start sm:self-auto">
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
+                statusFilter === 'all'
+                  ? 'bg-[#34C38F]/20 text-[#34C38F] border border-[#34C38F]/40'
+                  : 'bg-[#1C2521] text-[#8A9690] hover:text-[#E8EDEA]'
+              }`}
+            >
+              الكل ({codes.length})
+            </button>
+            <button
+              onClick={() => setStatusFilter('available')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
+                statusFilter === 'available'
+                  ? 'bg-[#E0B35A]/20 text-[#E0B35A] border border-[#E0B35A]/40'
+                  : 'bg-[#1C2521] text-[#8A9690] hover:text-[#E8EDEA]'
+              }`}
+            >
+              متاح ({codes.filter((c) => c.status === 'available').length})
+            </button>
+            <button
+              onClick={() => setStatusFilter('used')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
+                statusFilter === 'used'
+                  ? 'bg-[#34C38F]/20 text-[#34C38F] border border-[#34C38F]/40'
+                  : 'bg-[#1C2521] text-[#8A9690] hover:text-[#E8EDEA]'
+              }`}
+            >
+              تم الصرف ({codes.filter((c) => c.status === 'used').length})
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Search Input */}
+        <div className="relative">
+          <Search className="w-4 h-4 text-[#8A9690] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="بحث بالاسم أو رقم الهاتف أو كود الاستلام..."
+            className="w-full bg-[#1C2521] border border-[#26312C] rounded-xl pr-9 pl-3 py-2 text-xs text-[#E8EDEA] placeholder:text-[#8A9690] focus:outline-none focus:border-[#34C38F] transition"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8A9690] hover:text-[#E8EDEA]"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {codes.length === 0 ? (
@@ -193,11 +264,24 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
               <span>توليد الأكواد لجميع المستفيدين الآن</span>
             </button>
           </div>
+        ) : filteredCodes.length === 0 ? (
+          <div className="py-10 text-center text-[#8A9690] text-xs space-y-2">
+            <p>لا توجد نتائج مطابقة لبحثك في هذا الشهر.</p>
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setStatusFilter('all');
+              }}
+              className="text-[#34C38F] underline hover:no-underline"
+            >
+              إعادة تعيين الفلاتر
+            </button>
+          </div>
         ) : (
           <>
-            {/* Mobile Cards for Phones (< 768px) */}
-            <div className="md:hidden space-y-3">
-              {codes.map((c) => {
+            {/* Mobile Cards for Phones (< 768px): 100% Responsive, Perfectly Sized */}
+            <div className="md:hidden space-y-2.5">
+              {filteredCodes.map((c) => {
                 const isUsed = c.status === 'used';
                 const isCopied = copiedCodeId === c.id;
                 const { smsUrl } = buildSmsLink(c.beneficiaryPhone, c.code, c.monthKey);
@@ -205,14 +289,15 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
                 return (
                   <div
                     key={c.id}
-                    className="p-4 rounded-xl bg-[#1C2521] border border-[#26312C] space-y-3 shadow-sm"
+                    className="p-3.5 rounded-xl bg-[#1C2521] border border-[#26312C] space-y-2.5 shadow-sm"
                   >
+                    {/* Header: Beneficiary Name, Phone & Status */}
                     <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h3 className="font-bold text-sm text-[#E8EDEA]">{c.beneficiaryName}</h3>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-bold text-sm text-[#E8EDEA] truncate">{c.beneficiaryName}</h3>
                         <div className="font-mono text-xs text-[#8A9690] mt-0.5">{c.beneficiaryPhone}</div>
                       </div>
-                      <div>
+                      <div className="flex-shrink-0">
                         {isUsed ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#34C38F]/15 text-[#34C38F] font-bold text-[10px] border border-[#34C38F]/30">
                             <CheckCircle2 className="w-3 h-3" />
@@ -226,44 +311,66 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
                       </div>
                     </div>
 
-                    {/* 6-Digit Code & Actions */}
-                    <div className="flex items-center justify-between pt-2 border-t border-[#26312C] gap-2">
-                      <div className="flex items-center gap-2 bg-[#161D1A] px-3 py-1.5 rounded-xl border border-[#26312C]">
-                        <span className="text-[10px] text-[#8A9690]">الكود:</span>
-                        <span className="font-mono font-extrabold text-base tracking-widest text-[#E0B35A]">
+                    {/* Dedicated Full-Width Code Display Bar */}
+                    <div className="bg-[#161D1A] px-3 py-2 rounded-xl border border-[#26312C] flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <KeyRound className="w-3.5 h-3.5 text-[#E0B35A] flex-shrink-0" />
+                        <span className="text-[10px] text-[#8A9690] flex-shrink-0">الكود:</span>
+                        <span className="font-mono font-extrabold text-xs sm:text-sm text-[#E0B35A] tracking-wider truncate select-all">
                           {c.code}
                         </span>
                       </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => handleCopyCode(c.id, c.code)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#161D1A] hover:bg-[#26312C] border border-[#26312C] text-xs text-[#E8EDEA] transition cursor-pointer"
-                          title="نسخ الكود"
-                        >
-                          {isCopied ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 text-[#34C38F]" />
-                              <span className="text-[#34C38F] text-[11px]">تم</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3.5 h-3.5 text-[#8A9690]" />
-                              <span className="text-[11px]">نسخ</span>
-                            </>
-                          )}
-                        </button>
-
-                        <a
-                          href={smsUrl}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#34C38F]/15 hover:bg-[#34C38F]/25 border border-[#34C38F]/30 text-[#34C38F] text-xs font-semibold transition"
-                          title="إرسال رسالة SMS"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" />
-                          <span className="text-[11px]">SMS</span>
-                        </a>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyCode(c.id, c.code)}
+                        className="p-1 rounded-lg text-[#8A9690] hover:text-[#34C38F] hover:bg-[#1C2521] transition flex-shrink-0 cursor-pointer"
+                        title="نسخ الكود"
+                      >
+                        {isCopied ? <Check className="w-3.5 h-3.5 text-[#34C38F]" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
                     </div>
+
+                    {/* Action Buttons: 2 Equal-Width Touch Buttons */}
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#26312C]/60">
+                      <button
+                        type="button"
+                        onClick={() => handleCopyCode(c.id, c.code)}
+                        className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-[#161D1A] hover:bg-[#26312C] border border-[#26312C] text-xs font-semibold text-[#E8EDEA] transition active:scale-95 cursor-pointer"
+                      >
+                        {isCopied ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-[#34C38F]" />
+                            <span className="text-[#34C38F] font-bold">تم النسخ</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5 text-[#8A9690]" />
+                            <span>نسخ الكود</span>
+                          </>
+                        )}
+                      </button>
+
+                      <a
+                        href={smsUrl}
+                        className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-[#34C38F]/15 hover:bg-[#34C38F]/25 border border-[#34C38F]/30 text-[#34C38F] text-xs font-bold transition active:scale-95 text-center"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>إرسال SMS</span>
+                      </a>
+                    </div>
+
+                    {/* Used Date Info if used */}
+                    {isUsed && c.usedAt && (
+                      <div className="text-[10px] text-[#8A9690] flex items-center justify-between pt-1 border-t border-[#26312C]/40">
+                        <span>وقت وتاريخ الصرف:</span>
+                        <span className="font-mono text-[#E8EDEA]">
+                          {new Intl.DateTimeFormat('ar-EG', {
+                            dateStyle: 'short',
+                            timeStyle: 'short',
+                          }).format(new Date(c.usedAt))}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 );
               })}

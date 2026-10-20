@@ -91,3 +91,28 @@
 
 - **حجب الرقم القومي**: يتم إخفاء 4 أرقام وسطية من الرقم القومي افتراضياً في جميع الجداول، ولا يتم إظهار الرقم الكامل إلا بطلب صريح مع تسجيل هوية الموظف وتاريخ العملية في جدول `audit_logs`.
 - **منع الصرف المزدوج**: دالة `process_charity_delivery` تستخدم قفل السطر `FOR UPDATE` في PostgreSQL، وتتحقق من مطابقة الشهر وحالة الكود ورصيد النقاط، وتجري عملية الخصم والتسجيل داخل كتلة ذرية لا تقبل التجزئة.
+
+---
+
+## 🐙 النشر والتشغيل على GitHub و GitHub Pages
+
+المشروع مُهيأ ومجهز بالكامل للعمل المباشر مع **GitHub**:
+
+### 1. رفع المشروع إلى مستودع GitHub الخاص بك:
+```bash
+# إنشاء مستودع جديد على GitHub ثم تنفيذ الأوامر التالية:
+git add .
+git commit -m "Initial commit: منصة جمعية عطاء الخيرية"
+git remote add origin https://github.com/<YOUR_USERNAME>/<YOUR_REPO_NAME>.git
+git branch -M main
+git push -u origin main
+```
+
+### 2. التفعيل التلقائي للنشر على GitHub Pages:
+يحتوي المشروع على ملف سير عمل مؤتمت بالكامل (`.github/workflows/deploy.yml`):
+1. افتح صفحة المستودع على **GitHub**.
+2. انتقل إلى **Settings** > **Pages**.
+3. تحت قسم **Build and deployment**، اختر **Source: GitHub Actions**.
+4. بمجرد قيامك بأي `git push` لفرع `main`، سيقوم GitHub ببناء الموقع ونشره تلقائياً على الرابط:
+   `https://<YOUR_USERNAME>.github.io/<YOUR_REPO_NAME>/`
+

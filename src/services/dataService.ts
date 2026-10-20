@@ -52,6 +52,8 @@ const INITIAL_STAFF: StaffAccount[] = [
     email: 'admin@ataa.org.eg',
     fullName: 'أ. مصطفى الشريف (المدير العام)',
     role: 'admin',
+    phone: '01012345678',
+    nationalId: '28001011200159',
     isActive: true,
     createdAt: '2026-08-01T08:00:00Z',
     lastLoginAt: '2026-10-16T12:30:00Z',
@@ -62,6 +64,8 @@ const INITIAL_STAFF: StaffAccount[] = [
     email: 'tarek@ataa.org.eg',
     fullName: 'طارق حسام الدين (مسؤول الصرف)',
     role: 'staff',
+    phone: '01123456789',
+    nationalId: '29005121400873',
     isActive: true,
     createdAt: '2026-08-15T09:00:00Z',
     lastLoginAt: '2026-10-16T14:10:00Z',
@@ -72,6 +76,8 @@ const INITIAL_STAFF: StaffAccount[] = [
     email: 'mona@ataa.org.eg',
     fullName: 'منى عبد العزيز (مسؤولة التسجيل)',
     role: 'staff',
+    phone: '01234567890',
+    nationalId: '29208241201984',
     isActive: true,
     createdAt: '2026-09-01T08:30:00Z',
     lastLoginAt: '2026-10-15T16:00:00Z',
@@ -566,25 +572,86 @@ class DataService {
   }
 
   getStaffAccounts(): StaffAccount[] {
-    return this.getStorage<StaffAccount[]>(STORAGE_KEYS.STAFF, INITIAL_STAFF);
+    const list = this.getStorage<StaffAccount[]>(STORAGE_KEYS.STAFF, INITIAL_STAFF);
+    let updated = false;
+    const normalized = list.map((s) => {
+      const seed = INITIAL_STAFF.find((init) => init.id === s.id || init.username === s.username);
+      if (seed && (!s.phone || !s.nationalId)) {
+        updated = true;
+        return {
+          ...s,
+          phone: s.phone || seed.phone,
+          nationalId: s.nationalId || seed.nationalId,
+        };
+      }
+      return s;
+    });
+    if (updated) {
+      this.setStorage(STORAGE_KEYS.STAFF, normalized);
+    }
+    return normalized;
   }
 
-  createStaffAccount(data: { username: string; email: string; fullName: string; role: 'admin' | 'staff' }): { success: boolean; error?: string } {
+  createStaffAccount(data: {
+    username: string;
+    email: string;
+    fullName: string;
+    role: 'admin' | 'staff';
+    phone?: string;
+    nationalId?: string;
+  }): { success: boolean; error?: string } {
     const list = this.getStaffAccounts();
-    if (list.some((s) => s.username === data.username.trim())) {
+    const cleanUsername = data.username.trim().toLowerCase();
+    const cleanEmail = data.email.trim().toLowerCase();
+    const cleanFullName = data.fullName.trim();
+    const cleanPhone = (data.phone || '').trim();
+    const cleanNationalId = (data.nationalId || '').trim();
+
+    if (!cleanUsername || !cleanEmail || !cleanFullName) {
+      return { success: false, error: 'يرجى إدخال كافة الحقول المطلوبة' };
+    }
+
+    if (list.some((s) => s.username.toLowerCase() === cleanUsername)) {
       return { success: false, error: 'اسم المستخدم مسجل مسبقاً' };
     }
-    if (list.some((s) => s.email === data.email.trim())) {
+    if (list.some((s) => s.email.toLowerCase() === cleanEmail)) {
       return { success: false, error: 'البريد الإلكتروني مسجل مسبقاً' };
+    }
+
+    // Phone validation if entered
+    if (cleanPhone) {
+      const phoneValidation = validateEgyptianPhone(cleanPhone);
+      if (!phoneValidation.isValid) {
+        return {
+          success: false,
+          error: phoneValidation.errorMessage || 'رقم الهاتف غير صحيح (يجب أن يكون 11 رقماً ويبدأ بـ 01)',
+        };
+      }
+    }
+
+    // National ID validation if entered
+    if (cleanNationalId) {
+      const nidValidation = validateEgyptianNationalId(cleanNationalId);
+      if (!nidValidation.isValid) {
+        return {
+          success: false,
+          error: nidValidation.errorMessage || 'الرقم القومي غير صحيح (يجب أن يتكون من 14 رقماً مصرياً صالحاً)',
+        };
+      }
+      if (list.some((s) => s.nationalId === cleanNationalId)) {
+        return { success: false, error: 'الرقم القومي مسجل مسبقاً لموظف آخر' };
+      }
     }
 
     const current = this.getCurrentUser();
     const newStaff: StaffAccount = {
       id: 'staff_' + Date.now(),
-      username: data.username.trim(),
-      email: data.email.trim(),
-      fullName: data.fullName.trim(),
+      username: cleanUsername,
+      email: cleanEmail,
+      fullName: cleanFullName,
       role: data.role,
+      phone: cleanPhone || undefined,
+      nationalId: cleanNationalId || undefined,
       isActive: true,
       createdAt: new Date().toISOString(),
     };
@@ -600,7 +667,102 @@ class DataService {
         actorRole: current.role,
         targetId: newStaff.id,
         targetName: newStaff.fullName,
-        details: `إنشاء حساب موظف جديد: ${newStaff.fullName} برتبة (${newStaff.role === 'admin' ? 'مدير' : 'موظف'})`,
+        details: `إنشاء حساب موظف جديد: ${newStaff.fullName} برتبة (${newStaff.role === 'admin' ? 'مدير' : 'موظف'})${cleanPhone ? ` • هاتف: ${cleanPhone}` : ''}${cleanNationalId ? ` • قومي: ${cleanNationalId}` : ''}`,
+      });
+    }
+
+    return { success: true };
+  }
+
+  updateStaffAccount(
+    id: string,
+    data: {
+      username?: string;
+      email?: string;
+      fullName?: string;
+      role?: 'admin' | 'staff';
+      phone?: string;
+      nationalId?: string;
+    }
+  ): { success: boolean; error?: string } {
+    const list = this.getStaffAccounts();
+    const staff = list.find((s) => s.id === id);
+    if (!staff) return { success: false, error: 'الموظف غير موجود' };
+
+    const cleanUsername = data.username !== undefined ? data.username.trim().toLowerCase() : undefined;
+    const cleanEmail = data.email !== undefined ? data.email.trim().toLowerCase() : undefined;
+    const cleanFullName = data.fullName !== undefined ? data.fullName.trim() : undefined;
+    const cleanPhone = data.phone !== undefined ? data.phone.trim() : undefined;
+    const cleanNationalId = data.nationalId !== undefined ? data.nationalId.trim() : undefined;
+
+    if (cleanUsername !== undefined) {
+      if (!cleanUsername) return { success: false, error: 'اسم المستخدم مطلوب' };
+      if (list.some((s) => s.id !== id && s.username.toLowerCase() === cleanUsername)) {
+        return { success: false, error: 'اسم المستخدم مسجل مسبقاً لموظف آخر' };
+      }
+      staff.username = cleanUsername;
+    }
+
+    if (cleanEmail !== undefined) {
+      if (!cleanEmail) return { success: false, error: 'البريد الإلكتروني مطلوب' };
+      if (list.some((s) => s.id !== id && s.email.toLowerCase() === cleanEmail)) {
+        return { success: false, error: 'البريد الإلكتروني مسجل مسبقاً لموظف آخر' };
+      }
+      staff.email = cleanEmail;
+    }
+
+    if (cleanFullName !== undefined) {
+      if (!cleanFullName) return { success: false, error: 'الاسم الكامل مطلوب' };
+      staff.fullName = cleanFullName;
+    }
+
+    if (data.role) {
+      staff.role = data.role;
+    }
+
+    if (cleanPhone !== undefined) {
+      if (cleanPhone) {
+        const phoneValidation = validateEgyptianPhone(cleanPhone);
+        if (!phoneValidation.isValid) {
+          return { success: false, error: phoneValidation.errorMessage || 'رقم الهاتف غير صحيح' };
+        }
+        staff.phone = cleanPhone;
+      } else {
+        staff.phone = undefined;
+      }
+    }
+
+    if (cleanNationalId !== undefined) {
+      if (cleanNationalId) {
+        const nidValidation = validateEgyptianNationalId(cleanNationalId);
+        if (!nidValidation.isValid) {
+          return { success: false, error: nidValidation.errorMessage || 'الرقم القومي غير صحيح' };
+        }
+        if (list.some((s) => s.id !== id && s.nationalId === cleanNationalId)) {
+          return { success: false, error: 'الرقم القومي مسجل مسبقاً لموظف آخر' };
+        }
+        staff.nationalId = cleanNationalId;
+      } else {
+        staff.nationalId = undefined;
+      }
+    }
+
+    this.setStorage(STORAGE_KEYS.STAFF, list);
+
+    const current = this.getCurrentUser();
+    if (current?.id === id) {
+      this.setCurrentUser(staff);
+    }
+
+    if (current) {
+      this.recordAuditLog({
+        action: 'STAFF_UPDATE',
+        actorId: current.id,
+        actorName: current.fullName,
+        actorRole: current.role,
+        targetId: staff.id,
+        targetName: staff.fullName,
+        details: `تحديث بيانات الموظف: ${staff.fullName} (هاتف: ${staff.phone || 'غير مسجل'} • رقم قومي: ${staff.nationalId || 'غير مسجل'})`,
       });
     }
 

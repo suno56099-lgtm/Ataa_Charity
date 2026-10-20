@@ -11,6 +11,13 @@ import {
   AlertTriangle,
   Phone,
   Settings,
+  Edit2,
+  CreditCard,
+  Mail,
+  User,
+  Shield,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { StaffAccount } from '../types/index.ts';
 import { dataService } from '../services/dataService.ts';
@@ -26,25 +33,85 @@ export const StaffView: React.FC<StaffViewProps> = ({
   currentUser,
   onRefresh,
 }) => {
+  // Add Staff Modal state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     fullName: '',
+    phone: '',
+    nationalId: '',
     role: 'staff' as 'admin' | 'staff',
   });
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+
+  // Edit Staff Modal state
+  const [editingStaff, setEditingStaff] = useState<StaffAccount | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    username: '',
+    email: '',
+    fullName: '',
+    phone: '',
+    nationalId: '',
+    role: 'staff' as 'admin' | 'staff',
+  });
+  const [editFormError, setEditFormError] = useState<string | null>(null);
+  const [editFormSuccess, setEditFormSuccess] = useState<string | null>(null);
 
   // Association Settings (Phone printed on invoice)
   const [phoneSetting, setPhoneSetting] = useState(() => dataService.getAssociationPhone());
   const [phoneSuccess, setPhoneSuccess] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
 
+  // Password reset alert
   const [resetModalInfo, setResetModalInfo] = useState<{
     staffName: string;
     tempPass: string;
   } | null>(null);
+
+  // Banner Notification
+  const [bannerNotification, setBannerNotification] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+
+  // Copied indicator
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const handleCopy = (text: string, id: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleOpenAddModal = () => {
+    setFormData({
+      username: '',
+      email: '',
+      fullName: '',
+      phone: '',
+      nationalId: '',
+      role: 'staff',
+    });
+    setFormError(null);
+    setFormSuccess(null);
+    setIsAddModalOpen(true);
+  };
+
+  const handleOpenEditModal = (staff: StaffAccount) => {
+    setEditingStaff(staff);
+    setEditFormData({
+      username: staff.username,
+      email: staff.email,
+      fullName: staff.fullName,
+      phone: staff.phone || '',
+      nationalId: staff.nationalId || '',
+      role: staff.role,
+    });
+    setEditFormError(null);
+    setEditFormSuccess(null);
+  };
 
   const handleAddStaffSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +119,7 @@ export const StaffView: React.FC<StaffViewProps> = ({
     setFormSuccess(null);
 
     if (!formData.username.trim() || !formData.fullName.trim() || !formData.email.trim()) {
-      setFormError('يرجى ملء كافة الحقول المطلوبة');
+      setFormError('يرجى ملء كافة الحقول الأساسية المطلوبة');
       return;
     }
 
@@ -62,17 +129,31 @@ export const StaffView: React.FC<StaffViewProps> = ({
       return;
     }
 
-    setFormSuccess('تم إنشاء حساب الموظف الجديد بنجاح');
+    setFormSuccess('تم إنشاء حساب الموظف الجديد وحفظ بياناته بنجاح');
     setTimeout(() => {
       setIsAddModalOpen(false);
       onRefresh();
-    }, 900);
+    }, 800);
   };
 
-  const [bannerNotification, setBannerNotification] = useState<{
-    type: 'success' | 'error';
-    message: string;
-  } | null>(null);
+  const handleEditStaffSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStaff) return;
+    setEditFormError(null);
+    setEditFormSuccess(null);
+
+    const res = dataService.updateStaffAccount(editingStaff.id, editFormData);
+    if (!res.success) {
+      setEditFormError(res.error || 'فشل تحديث بيانات الموظف');
+      return;
+    }
+
+    setEditFormSuccess('تم تحديث بيانات الموظف بنجاح');
+    setTimeout(() => {
+      setEditingStaff(null);
+      onRefresh();
+    }, 800);
+  };
 
   const handleToggleActive = (id: string) => {
     const res = dataService.toggleStaffAccount(id);
@@ -104,32 +185,24 @@ export const StaffView: React.FC<StaffViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#161D1A] border border-[#26312C] rounded-2xl p-5 shadow-sm">
-        <div>
+    <div className="space-y-4 sm:space-y-6 animate-fade-in w-full max-w-7xl mx-auto">
+      {/* Top Header Card */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 bg-[#161D1A] border border-[#26312C] rounded-2xl p-4 sm:p-5 shadow-sm">
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <UserCog className="w-5 h-5 text-[#34C38F]" />
-            <h1 className="text-xl font-bold text-[#E8EDEA]">إدارة فريق العمل والصلاحيات</h1>
+            <UserCog className="w-5 h-5 text-[#34C38F] flex-shrink-0" />
+            <h1 className="text-lg sm:text-xl font-bold text-[#E8EDEA] truncate">
+              إدارة فريق العمل والصلاحيات
+            </h1>
           </div>
-          <p className="text-xs text-[#8A9690] mt-1">
-            إدارة حسابات مسؤولي الصرف والباحثين الميدانيين وتعيين الصلاحيات وإعادة ضبط كلمات المرور.
+          <p className="text-xs text-[#8A9690] mt-1 leading-relaxed">
+            تسجيل وتعديل بيانات الموظفين، أرقام الهواتف، الأرقام القومية، وتعيين الصلاحيات وكلمات المرور.
           </p>
         </div>
 
         <button
-          onClick={() => {
-            setFormData({
-              username: '',
-              email: '',
-              fullName: '',
-              role: 'staff',
-            });
-            setFormError(null);
-            setFormSuccess(null);
-            setIsAddModalOpen(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#34C38F] text-[#0F1412] font-bold text-sm shadow-md hover:bg-[#2bb27f] active:scale-95 transition"
+          onClick={handleOpenAddModal}
+          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#34C38F] text-[#0F1412] font-bold text-xs sm:text-sm shadow-md hover:bg-[#2bb27f] active:scale-95 transition cursor-pointer flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>إضافة موظف جديد</span>
@@ -153,14 +226,14 @@ export const StaffView: React.FC<StaffViewProps> = ({
         </div>
       )}
 
-      {/* Association & Invoice Settings Card */}
-      <div className="bg-[#161D1A] border border-[#26312C] rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-[#26312C]">
+      {/* Association Phone Settings Card */}
+      <div className="bg-[#161D1A] border border-[#26312C] rounded-2xl p-4 sm:p-5 shadow-sm space-y-3.5">
+        <div className="flex items-center justify-between pb-2.5 border-b border-[#26312C]">
           <div className="flex items-center gap-2">
             <Settings className="w-4 h-4 text-[#34C38F]" />
             <h2 className="text-sm font-bold text-[#E8EDEA]">إعدادات الجمعية والفاتورة</h2>
           </div>
-          <span className="text-[11px] text-[#8A9690]">يظهر على فواتير التسليم الرسمية</span>
+          <span className="text-[11px] text-[#8A9690] hidden xs:inline">يظهر على فواتير التسليم الرسمية</span>
         </div>
 
         <form
@@ -182,7 +255,7 @@ export const StaffView: React.FC<StaffViewProps> = ({
           <div className="flex-1 space-y-1">
             <label className="text-[#8A9690] flex items-center gap-1.5 font-medium">
               <Phone className="w-3.5 h-3.5 text-[#34C38F]" />
-              <span>رقم هاتف الجمعية (المطبوع أسفل ترويسة الفاتورة):</span>
+              <span>رقم هاتف الجمعية المطبوع على الفاتورة:</span>
             </label>
             <input
               type="text"
@@ -216,58 +289,155 @@ export const StaffView: React.FC<StaffViewProps> = ({
         )}
       </div>
 
-      {/* Staff Accounts Table */}
-      {/* Staff Accounts List */}
-      <div className="bg-[#161D1A] border border-[#26312C] rounded-2xl p-4 sm:p-5 shadow-sm overflow-hidden">
-        {/* Mobile Cards (< 768px) */}
-        <div className="md:hidden space-y-3">
+      {/* Staff Accounts Section */}
+      <div className="bg-[#161D1A] border border-[#26312C] rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-[#26312C]">
+          <div className="flex items-center gap-2">
+            <User className="w-4 h-4 text-[#34C38F]" />
+            <h2 className="text-sm font-bold text-[#E8EDEA]">قائمة أعضاء فريق العمل</h2>
+          </div>
+          <span className="text-xs text-[#8A9690]">{staffList.length} أعضاء</span>
+        </div>
+
+        {/* Mobile View: High-Legibility Professional Cards (< 768px) */}
+        <div className="md:hidden space-y-3.5">
           {staffList.map((staff) => {
             const isCurrent = currentUser?.id === staff.id;
             return (
               <div
                 key={staff.id}
-                className="p-4 rounded-xl bg-[#1C2521] border border-[#26312C] space-y-2.5 shadow-sm text-xs"
+                className="p-3.5 sm:p-4 rounded-xl bg-[#1C2521] border border-[#26312C] space-y-3 shadow-sm text-xs"
               >
+                {/* Header: Name + Role + Status */}
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="font-bold text-sm text-[#E8EDEA] flex items-center gap-1.5">
-                      <span>{staff.fullName}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold text-sm text-[#E8EDEA] flex items-center gap-1.5 flex-wrap">
+                      <span className="truncate">{staff.fullName}</span>
                       {isCurrent && (
-                        <span className="text-[10px] text-[#34C38F] font-bold">(حسابك)</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#34C38F]/20 text-[#34C38F] font-bold">
+                          حسابك
+                        </span>
                       )}
                     </div>
-                    <div className="font-mono text-xs text-[#E0B35A] mt-0.5">@{staff.username}</div>
+                    <div className="font-mono text-[11px] text-[#E0B35A] mt-0.5">@{staff.username}</div>
                   </div>
 
-                  <div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
                     {staff.role === 'admin' ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#E0B35A]/15 text-[#E0B35A] border border-[#E0B35A]/30 font-bold text-[10px]">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#E0B35A]/15 text-[#E0B35A] border border-[#E0B35A]/30 font-bold text-[10px]">
                         <ShieldCheck className="w-3 h-3" />
                         <span>مدير عام</span>
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-semibold text-[10px]">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-semibold text-[10px]">
                         <UserCheck className="w-3 h-3" />
                         <span>مسؤول صرف</span>
                       </span>
                     )}
+
+                    <span
+                      className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                        staff.isActive ? 'text-[#34C38F] bg-[#34C38F]/10' : 'text-[#8A9690] bg-[#8A9690]/10'
+                      }`}
+                    >
+                      {staff.isActive ? 'نشط' : 'معطل'}
+                    </span>
                   </div>
                 </div>
 
-                <div className="text-[11px] text-[#8A9690] flex items-center justify-between pt-1 border-t border-[#26312C]">
-                  <span className="font-mono">{staff.email}</span>
-                  <span className={staff.isActive ? 'text-[#34C38F]' : 'text-[#8A9690]'}>
-                    {staff.isActive ? '● نشط' : '○ معطل'}
+                {/* Contact & Identification Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-[#26312C] text-[11px]">
+                  {/* Phone */}
+                  <div className="flex items-center justify-between bg-[#161D1A] p-2 rounded-lg border border-[#26312C]/60">
+                    <div className="flex items-center gap-1.5 text-[#8A9690]">
+                      <Phone className="w-3.5 h-3.5 text-[#34C38F]" />
+                      <span>الهاتف:</span>
+                    </div>
+                    {staff.phone ? (
+                      <div className="flex items-center gap-1">
+                        <a
+                          href={`tel:${staff.phone}`}
+                          className="font-mono font-bold text-[#E8EDEA] hover:text-[#34C38F] transition"
+                        >
+                          {staff.phone}
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(staff.phone || '', `phone-${staff.id}`)}
+                          className="p-1 text-[#8A9690] hover:text-[#E8EDEA]"
+                          title="نسخ رقم الهاتف"
+                        >
+                          {copiedId === `phone-${staff.id}` ? (
+                            <Check className="w-3 h-3 text-[#34C38F]" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-[#8A9690] italic text-[10px]">غير مسجل</span>
+                    )}
+                  </div>
+
+                  {/* National ID */}
+                  <div className="flex items-center justify-between bg-[#161D1A] p-2 rounded-lg border border-[#26312C]/60">
+                    <div className="flex items-center gap-1.5 text-[#8A9690]">
+                      <CreditCard className="w-3.5 h-3.5 text-[#E0B35A]" />
+                      <span>الرقم القومي:</span>
+                    </div>
+                    {staff.nationalId ? (
+                      <div className="flex items-center gap-1">
+                        <span className="font-mono font-bold text-[#E8EDEA] tracking-wide">
+                          {staff.nationalId}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(staff.nationalId || '', `nid-${staff.id}`)}
+                          className="p-1 text-[#8A9690] hover:text-[#E8EDEA]"
+                          title="نسخ الرقم القومي"
+                        >
+                          {copiedId === `nid-${staff.id}` ? (
+                            <Check className="w-3 h-3 text-[#34C38F]" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-[#8A9690] italic text-[10px]">غير مسجل</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Email line */}
+                <div className="flex items-center justify-between text-[11px] text-[#8A9690] px-1">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <Mail className="w-3.5 h-3.5 text-[#8A9690]" />
+                    <span className="font-mono truncate">{staff.email}</span>
+                  </div>
+                  <span className="text-[10px] text-[#8A9690] whitespace-nowrap">
+                    {staff.lastLoginAt
+                      ? `آخر دخول: ${new Intl.DateTimeFormat('ar-EG', { dateStyle: 'short' }).format(new Date(staff.lastLoginAt))}`
+                      : 'لم يسجل دخول'}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#26312C]">
+                {/* Actions */}
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#26312C] flex-wrap">
+                  <button
+                    onClick={() => handleOpenEditModal(staff)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#161D1A] hover:bg-[#26312C] border border-[#26312C] text-xs font-semibold text-[#34C38F] hover:border-[#34C38F]/40 transition cursor-pointer"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    <span>تعديل البيانات</span>
+                  </button>
+
                   <button
                     onClick={() => handleResetPassword(staff)}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#161D1A] hover:bg-[#26312C] border border-[#26312C] text-xs font-semibold text-[#E8EDEA] transition cursor-pointer"
                   >
                     <KeyRound className="w-3.5 h-3.5 text-[#E0B35A]" />
-                    <span>إعادة تعيين كلمة المرور</span>
+                    <span>كلمة المرور</span>
                   </button>
 
                   {!isCurrent && (
@@ -275,8 +445,8 @@ export const StaffView: React.FC<StaffViewProps> = ({
                       onClick={() => handleToggleActive(staff.id)}
                       className={`p-1.5 rounded-xl border text-xs transition cursor-pointer ${
                         staff.isActive
-                          ? 'bg-[#161D1A] border-[#F0707A]/30 text-[#F0707A]'
-                          : 'bg-[#34C38F]/15 border-[#34C38F]/30 text-[#34C38F]'
+                          ? 'bg-[#161D1A] border-[#F0707A]/30 text-[#F0707A] hover:bg-[#F0707A]/10'
+                          : 'bg-[#34C38F]/15 border-[#34C38F]/30 text-[#34C38F] hover:bg-[#34C38F]/25'
                       }`}
                       title={staff.isActive ? 'تعطيل الحساب' : 'تفعيل الحساب'}
                     >
@@ -291,15 +461,16 @@ export const StaffView: React.FC<StaffViewProps> = ({
 
         {/* Desktop & Tablet Table (>= 768px) */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-right text-xs min-w-[640px]">
+          <table className="w-full text-right text-xs min-w-[760px]">
             <thead>
               <tr className="border-b border-[#26312C] text-[#8A9690]">
                 <th className="pb-3 pr-2">الموظف</th>
+                <th className="pb-3">رقم الهاتف</th>
+                <th className="pb-3">الرقم القومي</th>
                 <th className="pb-3">اسم المستخدم</th>
-                <th className="pb-3">البريد الإلكتروني الداخلي</th>
+                <th className="pb-3">البريد الإلكتروني</th>
                 <th className="pb-3">الدور والصلاحية</th>
                 <th className="pb-3">الحالة</th>
-                <th className="pb-3">آخر تسجيل دخول</th>
                 <th className="pb-3 text-center pl-2">إجراءات</th>
               </tr>
             </thead>
@@ -316,7 +487,29 @@ export const StaffView: React.FC<StaffViewProps> = ({
                         </span>
                       )}
                     </td>
-                    <td className="py-3.5 font-mono text-xs text-[#E0B35A]">{staff.username}</td>
+                    <td className="py-3.5 font-mono text-xs">
+                      {staff.phone ? (
+                        <a
+                          href={`tel:${staff.phone}`}
+                          className="text-[#E8EDEA] hover:text-[#34C38F] font-bold transition flex items-center gap-1"
+                        >
+                          <Phone className="w-3 h-3 text-[#34C38F]" />
+                          <span>{staff.phone}</span>
+                        </a>
+                      ) : (
+                        <span className="text-[#8A9690] italic">—</span>
+                      )}
+                    </td>
+                    <td className="py-3.5 font-mono text-xs">
+                      {staff.nationalId ? (
+                        <span className="text-[#E8EDEA] font-semibold tracking-wider">
+                          {staff.nationalId}
+                        </span>
+                      ) : (
+                        <span className="text-[#8A9690] italic">—</span>
+                      )}
+                    </td>
+                    <td className="py-3.5 font-mono text-xs text-[#E0B35A]">@{staff.username}</td>
                     <td className="py-3.5 font-mono text-xs text-[#8A9690]">{staff.email}</td>
                     <td className="py-3.5">
                       {staff.role === 'admin' ? (
@@ -327,13 +520,13 @@ export const StaffView: React.FC<StaffViewProps> = ({
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-semibold text-[11px]">
                           <UserCheck className="w-3 h-3" />
-                          <span>مسؤول صرف وتسجيل</span>
+                          <span>مسؤول صرف</span>
                         </span>
                       )}
                     </td>
                     <td className="py-3.5">
                       <span
-                        className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
+                        className={`inline-flex items-center gap-1.5 text-[11px] font-semibold ${
                           staff.isActive ? 'text-[#34C38F]' : 'text-[#8A9690]'
                         }`}
                       >
@@ -345,24 +538,24 @@ export const StaffView: React.FC<StaffViewProps> = ({
                         <span>{staff.isActive ? 'نشط' : 'معطل'}</span>
                       </span>
                     </td>
-                    <td className="py-3.5 text-[#8A9690]">
-                      {staff.lastLoginAt
-                        ? new Intl.DateTimeFormat('ar-EG', {
-                            dateStyle: 'short',
-                            timeStyle: 'short',
-                          }).format(new Date(staff.lastLoginAt))
-                        : 'لم يسجل دخول بعد'}
-                    </td>
                     <td className="py-3.5 pl-2 text-center">
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-1.5">
+                        {/* Edit Staff Info */}
+                        <button
+                          onClick={() => handleOpenEditModal(staff)}
+                          className="p-1.5 rounded-lg bg-[#1C2521] hover:bg-[#26312C] text-[#34C38F] transition cursor-pointer"
+                          title="تعديل بيانات الموظف ورقم الهاتف والقومي"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+
                         {/* Reset Password */}
                         <button
                           onClick={() => handleResetPassword(staff)}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#1C2521] hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] text-xs transition cursor-pointer"
+                          className="p-1.5 rounded-lg bg-[#1C2521] hover:bg-[#26312C] text-[#E0B35A] transition cursor-pointer"
                           title="إعادة تعيين كلمة المرور"
                         >
-                          <KeyRound className="w-3 h-3 text-[#E0B35A]" />
-                          <span>إعادة تعيين</span>
+                          <KeyRound className="w-3.5 h-3.5" />
                         </button>
 
                         {/* Disable / Enable toggle */}
@@ -392,8 +585,8 @@ export const StaffView: React.FC<StaffViewProps> = ({
 
       {/* Add Staff Account Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-[#161D1A] border border-[#26312C] p-6 shadow-2xl text-[#E8EDEA] animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-4 overflow-y-auto animate-fade-in">
+          <div className="w-full max-w-lg rounded-2xl bg-[#161D1A] border border-[#26312C] p-5 sm:p-6 shadow-2xl text-[#E8EDEA] my-8 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-[#26312C] mb-4">
               <div className="flex items-center gap-2">
                 <UserCog className="w-5 h-5 text-[#34C38F]" />
@@ -401,7 +594,7 @@ export const StaffView: React.FC<StaffViewProps> = ({
               </div>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-[#1C2521] text-[#8A9690] hover:text-[#E8EDEA]"
+                className="p-1.5 rounded-xl hover:bg-[#1C2521] text-[#8A9690] hover:text-[#E8EDEA] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -421,9 +614,11 @@ export const StaffView: React.FC<StaffViewProps> = ({
               </div>
             )}
 
-            <form onSubmit={handleAddStaffSubmit} className="space-y-4 text-xs">
+            <form onSubmit={handleAddStaffSubmit} className="space-y-3.5 text-xs">
               <div>
-                <label className="block text-[#8A9690] mb-1 font-medium">الاسم الكامل للموظف</label>
+                <label className="block text-[#8A9690] mb-1 font-medium">
+                  الاسم الكامل للموظف <span className="text-[#F0707A]">*</span>
+                </label>
                 <input
                   type="text"
                   required
@@ -434,30 +629,75 @@ export const StaffView: React.FC<StaffViewProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block text-[#8A9690] mb-1 font-medium">اسم المستخدم للدخول</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.username}
-                  onChange={(e) =>
-                    setFormData({ ...formData, username: e.target.value.toLowerCase().trim() })
-                  }
-                  placeholder="مثال: youssef_staff"
-                  className="w-full font-mono bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2.5 text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
-                />
+              {/* Phone & National ID in responsive grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[#8A9690] mb-1 font-medium flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5 text-[#34C38F]" />
+                    <span>رقم هاتف الموظف</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value.trim() })}
+                    placeholder="01012345678"
+                    maxLength={11}
+                    className="w-full font-mono bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2.5 text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
+                  />
+                  <span className="text-[10px] text-[#8A9690] mt-0.5 block">
+                    11 رقماً مصرياً يبدأ بـ 01
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-[#8A9690] mb-1 font-medium flex items-center gap-1">
+                    <CreditCard className="w-3.5 h-3.5 text-[#E0B35A]" />
+                    <span>الرقم القومي للموظف</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.nationalId}
+                    onChange={(e) => setFormData({ ...formData, nationalId: e.target.value.trim() })}
+                    placeholder="28503140101234"
+                    maxLength={14}
+                    className="w-full font-mono bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2.5 text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
+                  />
+                  <span className="text-[10px] text-[#8A9690] mt-0.5 block">
+                    14 رقماً مصرياً قومياً معتمداً
+                  </span>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-[#8A9690] mb-1 font-medium">البريد الإلكتروني الداخلي</label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value.trim() })}
-                  placeholder="youssef@ataa.org.eg"
-                  className="w-full font-mono bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2.5 text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[#8A9690] mb-1 font-medium">
+                    اسم المستخدم للدخول <span className="text-[#F0707A]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.username}
+                    onChange={(e) =>
+                      setFormData({ ...formData, username: e.target.value.toLowerCase().trim() })
+                    }
+                    placeholder="youssef_staff"
+                    className="w-full font-mono bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2.5 text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[#8A9690] mb-1 font-medium">
+                    البريد الإلكتروني الداخلي <span className="text-[#F0707A]">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value.trim() })}
+                    placeholder="youssef@ataa.org.eg"
+                    className="w-full font-mono bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2.5 text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
+                  />
+                </div>
               </div>
 
               <div>
@@ -478,13 +718,13 @@ export const StaffView: React.FC<StaffViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-[#1C2521] hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] transition"
+                  className="px-4 py-2.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] transition cursor-pointer"
                 >
                   إلغاء
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] text-[#0F1412] font-bold shadow-md transition"
+                  className="px-5 py-2.5 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] text-[#0F1412] font-bold shadow-md transition cursor-pointer"
                 >
                   إنشاء الحساب
                 </button>
@@ -494,9 +734,149 @@ export const StaffView: React.FC<StaffViewProps> = ({
         </div>
       )}
 
+      {/* Edit Staff Account Modal */}
+      {editingStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-4 overflow-y-auto animate-fade-in">
+          <div className="w-full max-w-lg rounded-2xl bg-[#161D1A] border border-[#26312C] p-5 sm:p-6 shadow-2xl text-[#E8EDEA] my-8 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-[#26312C] mb-4">
+              <div className="flex items-center gap-2">
+                <Edit2 className="w-5 h-5 text-[#34C38F]" />
+                <h3 className="text-base font-bold">تعديل بيانات الموظف</h3>
+              </div>
+              <button
+                onClick={() => setEditingStaff(null)}
+                className="p-1.5 rounded-xl hover:bg-[#1C2521] text-[#8A9690] hover:text-[#E8EDEA] cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {editFormError && (
+              <div className="mb-4 p-3 rounded-xl bg-[#F0707A]/15 border border-[#F0707A]/30 text-[#F0707A] text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                <span>{editFormError}</span>
+              </div>
+            )}
+
+            {editFormSuccess && (
+              <div className="mb-4 p-3 rounded-xl bg-[#34C38F]/15 border border-[#34C38F]/30 text-[#34C38F] text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <span>{editFormSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleEditStaffSubmit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-[#8A9690] mb-1 font-medium">الاسم الكامل للموظف</label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.fullName}
+                  onChange={(e) => setEditFormData({ ...editFormData, fullName: e.target.value })}
+                  className="w-full bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2.5 text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
+                />
+              </div>
+
+              {/* Phone & National ID in responsive grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[#8A9690] mb-1 font-medium flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5 text-[#34C38F]" />
+                    <span>رقم هاتف الموظف</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={editFormData.phone}
+                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value.trim() })}
+                    placeholder="01012345678"
+                    maxLength={11}
+                    className="w-full font-mono bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2.5 text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
+                  />
+                  <span className="text-[10px] text-[#8A9690] mt-0.5 block">11 رقماً مصرياً</span>
+                </div>
+
+                <div>
+                  <label className="block text-[#8A9690] mb-1 font-medium flex items-center gap-1">
+                    <CreditCard className="w-3.5 h-3.5 text-[#E0B35A]" />
+                    <span>الرقم القومي للموظف</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.nationalId}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, nationalId: e.target.value.trim() })
+                    }
+                    placeholder="28503140101234"
+                    maxLength={14}
+                    className="w-full font-mono bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2.5 text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
+                  />
+                  <span className="text-[10px] text-[#8A9690] mt-0.5 block">14 رقماً مصرياً</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[#8A9690] mb-1 font-medium">اسم المستخدم للدخول</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.username}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, username: e.target.value.toLowerCase().trim() })
+                    }
+                    className="w-full font-mono bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2.5 text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[#8A9690] mb-1 font-medium">البريد الإلكتروني الداخلي</label>
+                  <input
+                    type="email"
+                    required
+                    value={editFormData.email}
+                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value.trim() })}
+                    className="w-full font-mono bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2.5 text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[#8A9690] mb-1 font-medium">الدور والصلاحية</label>
+                <select
+                  value={editFormData.role}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, role: e.target.value as 'admin' | 'staff' })
+                  }
+                  className="w-full bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2.5 text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
+                >
+                  <option value="staff">مسؤول صرف وتسجيل (Staff)</option>
+                  <option value="admin">مدير النظام (Admin - كامل الصلاحيات)</option>
+                </select>
+              </div>
+
+              <div className="pt-3 border-t border-[#26312C] flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setEditingStaff(null)}
+                  className="px-4 py-2.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] transition cursor-pointer"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] text-[#0F1412] font-bold shadow-md transition cursor-pointer"
+                >
+                  حفظ التعديلات
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Password Reset Alert Modal */}
       {resetModalInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
           <div className="w-full max-w-sm rounded-2xl bg-[#161D1A] border border-[#26312C] p-6 shadow-2xl text-[#E8EDEA] text-center space-y-4 animate-fade-in">
             <div className="w-12 h-12 rounded-2xl bg-[#E0B35A]/15 text-[#E0B35A] flex items-center justify-center mx-auto">
               <KeyRound className="w-6 h-6" />
@@ -518,7 +898,7 @@ export const StaffView: React.FC<StaffViewProps> = ({
 
             <button
               onClick={() => setResetModalInfo(null)}
-              className="w-full py-2.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] text-xs font-semibold text-[#E8EDEA] transition"
+              className="w-full py-2.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] text-xs font-semibold text-[#E8EDEA] transition cursor-pointer"
             >
               تم النسخ والحفظ
             </button>

@@ -152,6 +152,15 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
       setShowConfirmDialog(false);
       setStep('success_receipt');
       onRefresh();
+
+      // Scroll to top of invoice so mobile users see the complete invoice from the header
+      setTimeout(() => {
+        const mainEl = document.querySelector('main');
+        if (mainEl) {
+          mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 50);
     } catch {
       setSubmitError('حدث خطأ غير متوقع أثناء معالجة المعاملة الذرية');
     } finally {
@@ -203,7 +212,7 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
 
           <div>
             <h1 className="text-2xl font-extrabold text-[#E8EDEA]">
-              صرف وتسليم الحصة التموينية
+              تسليم مستفيد
             </h1>
             <p className="text-xs text-[#8A9690] mt-1.5 max-w-md mx-auto leading-relaxed">
               أدخل كود الاستلام الشهري المعتمد (مثال: ataa2610482915) والمستلم من قبل المستفيد عبر رسالة SMS
@@ -526,7 +535,7 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
 
           {/* Floating Mobile Cart Bar (for phones and tablets < lg when cart has items) */}
           {cart.length > 0 && (
-            <div className="lg:hidden fixed bottom-16 left-3 right-3 z-30 bg-[#161D1A]/95 border border-[#34C38F]/50 backdrop-blur-md rounded-2xl p-3 shadow-2xl flex items-center justify-between animate-fade-in">
+            <div className="lg:hidden fixed bottom-[4.75rem] left-2.5 right-2.5 z-30 bg-[#161D1A]/95 border border-[#34C38F]/50 backdrop-blur-md rounded-2xl p-3 shadow-2xl flex items-center justify-between animate-fade-in">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-[#34C38F]/20 text-[#34C38F] flex items-center justify-center font-bold text-xs">
                   {totalCartUnits}

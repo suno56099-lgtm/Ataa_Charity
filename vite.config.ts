@@ -6,8 +6,14 @@ import path from 'path';
 import { defineConfig } from 'vite';
 
 export default defineConfig(() => {
+  const repoName = process.env.GITHUB_REPOSITORY
+    ? process.env.GITHUB_REPOSITORY.split('/')[1]
+    : 'Ataa_Charity';
+  const isGitHubActions = Boolean(process.env.GITHUB_ACTIONS);
+  const basePath = process.env.VITE_BASE_PATH || (isGitHubActions ? `/${repoName}/` : './');
+
   return {
-    base: '/Ataa_Charity/',
+    base: basePath,
 
     plugins: [
       react(),
@@ -18,7 +24,7 @@ export default defineConfig(() => {
         includeAssets: ['icon.svg', 'apple-touch-icon.png'],
 
         manifest: {
-          id: '/Ataa_Charity/',
+          id: basePath,
           name: 'جمعية عطاء - منصة إدارة المستفيدين والتوزيع',
           short_name: 'عطاء',
           description:
@@ -27,24 +33,24 @@ export default defineConfig(() => {
           background_color: '#0F1412',
           display: 'standalone',
           orientation: 'portrait-primary',
-          start_url: '/Ataa_Charity/',
-          scope: '/Ataa_Charity/',
+          start_url: basePath,
+          scope: basePath,
 
           icons: [
             {
-              src: '/Ataa_Charity/pwa-192x192.png',
+              src: 'pwa-192x192.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/Ataa_Charity/pwa-512x512.png',
+              src: 'pwa-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/Ataa_Charity/pwa-maskable-512x512.png',
+              src: 'pwa-maskable-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable',
@@ -65,7 +71,7 @@ export default defineConfig(() => {
 
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(process.cwd(), '.'),
       },
     },
 
