@@ -7,8 +7,6 @@ import {
   CheckCircle2,
   Receipt,
   RotateCcw,
-  Edit2,
-  Check,
 } from 'lucide-react';
 import { DeliveryRecord } from '../types/index.ts';
 import { dataService } from '../services/dataService.ts';
@@ -258,15 +256,8 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
   const [exportSuccess, setExportSuccess] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
 
-  // Association phone state (admin can edit from settings)
-  const [associationPhone, setAssociationPhone] = useState<string>(() =>
-    dataService.getAssociationPhone()
-  );
-  const [isEditingPhone, setIsEditingPhone] = useState(false);
-  const [newPhoneInput, setNewPhoneInput] = useState(associationPhone);
-
-  const currentUser = dataService.getCurrentUser();
-  const isAdmin = currentUser?.role === 'admin';
+  // Association phone from settings/storage
+  const associationPhone = dataService.getAssociationPhone();
 
   if (!delivery) return null;
 
@@ -278,15 +269,6 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
 
   const handlePrint = () => {
     window.print();
-  };
-
-  const handleSavePhone = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const res = dataService.updateAssociationPhone(newPhoneInput);
-    if (res.success) {
-      setAssociationPhone(newPhoneInput.trim());
-      setIsEditingPhone(false);
-    }
   };
 
   const handleSaveAsImage = async () => {
@@ -426,58 +408,11 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
               فاتورة تسليم
             </div>
 
-            {/* 3. Small line with association phone number (editable from settings) */}
+            {/* 3. Small line with association phone number */}
             <div className="text-[11px] sm:text-xs text-gray-600 flex items-center justify-center gap-1.5 pt-0.5">
               <span>هاتف الجمعية:</span>
               <span className="font-mono">{associationPhone}</span>
-
-              {/* Admin quick inline edit toggle (hidden in print) */}
-              {isAdmin && !isEditingPhone && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNewPhoneInput(associationPhone);
-                    setIsEditingPhone(true);
-                  }}
-                  className="p-0.5 rounded text-gray-400 hover:text-black no-print transition"
-                  title="تعديل هاتف الجمعية"
-                >
-                  <Edit2 className="w-3 h-3" />
-                </button>
-              )}
             </div>
-
-            {/* Admin phone edit form (hidden in print) */}
-            {isEditingPhone && (
-              <form
-                onSubmit={handleSavePhone}
-                className="flex items-center justify-center gap-1.5 pt-1 no-print"
-              >
-                <input
-                  type="text"
-                  value={newPhoneInput}
-                  onChange={(e) => setNewPhoneInput(e.target.value)}
-                  className="px-2 py-0.5 text-xs border border-gray-400 rounded w-28 text-center font-mono text-black bg-white"
-                  placeholder="رقم الهاتف"
-                  autoFocus
-                />
-                <button
-                  type="submit"
-                  className="p-1 rounded bg-[#34C38F] text-[#0F1412] text-xs font-bold"
-                  title="حفظ"
-                >
-                  <Check className="w-3 h-3" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsEditingPhone(false)}
-                  className="p-1 rounded bg-gray-200 text-gray-700 text-xs"
-                  title="إلغاء"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </form>
-            )}
           </div>
 
           <div className="border-t border-gray-300 my-2 sm:my-2.5"></div>

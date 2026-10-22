@@ -7,7 +7,6 @@ import {
   ArrowUpRight,
   TrendingUp,
   Clock,
-  Sparkles,
   CheckCircle2,
   MapPin,
   PackageCheck,
@@ -24,60 +23,21 @@ interface DashboardViewProps {
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
   metrics,
-  recentDeliveries,
+  recentDeliveries = [],
   onNavigate,
 }) => {
-  const maxWeeklyCount = Math.max(...metrics.weeklyDeliveries.map((w) => w.deliveryCount), 5);
+  const weeklyDeliveries = Array.isArray(metrics?.weeklyDeliveries) ? metrics.weeklyDeliveries : [];
+  const maxWeeklyCount = Math.max(
+    ...weeklyDeliveries.map((w) => w?.deliveryCount || 0),
+    5
+  );
+  const totalCodes = metrics?.codesThisMonthTotal || 0;
+  const usedCodes = metrics?.codesThisMonthUsed || 0;
   const completionPercentage =
-    metrics.codesThisMonthTotal > 0
-      ? Math.round((metrics.codesThisMonthUsed / metrics.codesThisMonthTotal) * 100)
-      : 0;
+    totalCodes > 0 ? Math.round((usedCodes / totalCodes) * 100) : 0;
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Top Welcome & Quick Actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#161D1A] border border-[#26312C] rounded-2xl p-5 shadow-sm">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl md:text-2xl font-extrabold text-[#E8EDEA]">
-              مرحباً بك في جمعية عطاء الخيرية
-            </h1>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30">
-              <Sparkles className="w-3 h-3" />
-              <span>مباشر</span>
-            </span>
-          </div>
-          <p className="text-sm text-[#8A9690] mt-1">
-            متابعة حية لدورة التوزيع، أكواد الصرف الشهرية، وأرصدة المستفيدين لشهر أكتوبر 2026 بقرية النسايمة.
-          </p>
-        </div>
-
-        {/* Quick Launch Buttons */}
-        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-2.5 w-full md:w-auto">
-          <button
-            onClick={() => onNavigate('delivery')}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#34C38F] text-[#0F1412] font-bold text-sm shadow-md hover:bg-[#2bb27f] active:scale-95 transition cursor-pointer"
-          >
-            <ShoppingBag className="w-4 h-4" />
-            <span>صرف وتسليم فوري</span>
-          </button>
-          <button
-            onClick={() => onNavigate('codes')}
-            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#1C2521] border border-[#26312C] text-[#E8EDEA] hover:bg-[#26312C] font-semibold text-sm transition cursor-pointer"
-          >
-            <KeyRound className="w-4 h-4 text-[#E0B35A]" />
-            <span>إدارة الأكواد الشهرية</span>
-          </button>
-          <button
-            onClick={() => onNavigate('beneficiaries')}
-            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#1C2521] border border-[#26312C] text-[#E8EDEA] hover:bg-[#26312C] font-semibold text-sm transition cursor-pointer"
-          >
-            <Users className="w-4 h-4 text-[#34C38F]" />
-            <span>إضافة مستفيد جديد</span>
-          </button>
-        </div>
-      </div>
-
       {/* Primary KPI Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Beneficiaries */}
@@ -183,15 +143,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Left: Monthly Distribution Progress Card (6 cols) */}
         <div className="lg:col-span-6 rounded-2xl bg-[#161D1A] border border-[#26312C] p-5 flex flex-col justify-between shadow-sm">
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <PackageCheck className="w-5 h-5 text-[#34C38F]" />
-                <h2 className="text-base font-bold text-[#E8EDEA]">
-                  مؤشرات توزيع الحصص التموينية لشهر أكتوبر 2026
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2 min-w-0">
+                <PackageCheck className="w-5 h-5 text-[#34C38F] flex-shrink-0" />
+                <h2 className="text-sm sm:text-base font-bold text-[#E8EDEA] leading-snug truncate">
+                  مؤشرات التوزيع لشهر أكتوبر 2026
                 </h2>
               </div>
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-semibold">
-                حالة التوزيع: نشط
+              <span className="whitespace-nowrap inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-semibold flex-shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#34C38F] animate-pulse"></span>
+                <span>نشط</span>
               </span>
             </div>
 

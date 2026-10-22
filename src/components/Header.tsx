@@ -1,5 +1,5 @@
 import React from 'react';
-import { HeartHandshake, LogOut, ShieldCheck, UserCheck, Clock, Menu } from 'lucide-react';
+import { HeartHandshake, LogOut, ShieldCheck, UserCheck, Clock } from 'lucide-react';
 import { StaffAccount } from '../types/index.ts';
 import { PWAInstallButton } from './PWAInstallButton.tsx';
 
@@ -14,27 +14,14 @@ export const Header: React.FC<HeaderProps> = ({
   currentUser,
   onLogout,
   inactivitySecondsRemaining,
-  onOpenMobileMenu,
 }) => {
   const isNearTimeout = inactivitySecondsRemaining <= 120; // 2 minutes or less
 
   return (
     <header className="sticky top-0 z-40 w-full bg-[#161D1A]/95 border-b border-[#26312C] px-3 sm:px-4 lg:px-8 py-2.5 sm:py-3 backdrop-blur-md">
       <div className="flex items-center justify-between max-w-7xl mx-auto gap-2 sm:gap-4">
-        {/* Right side in RTL: Hamburger for Mobile + Brand Logo & Name */}
+        {/* Right side in RTL: Brand Logo & Name */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          {/* 3-bars menu button next to association name */}
-          {onOpenMobileMenu && (
-            <button
-              type="button"
-              onClick={onOpenMobileMenu}
-              className="p-2 sm:p-2.5 rounded-xl bg-[#1C2521] border border-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] hover:border-[#34C38F]/50 hover:bg-[#26312C] active:scale-95 transition flex items-center justify-center flex-shrink-0 cursor-pointer shadow-sm"
-              aria-label="فتح القائمة الجانبية"
-              title="فتح القائمة الجانبية"
-            >
-              <Menu className="w-5 h-5 text-[#34C38F]" />
-            </button>
-          )}
 
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#34C38F] to-[#10B981] flex items-center justify-center shadow-lg shadow-[#34C38F]/20 text-[#0F1412] flex-shrink-0">
             <HeartHandshake className="w-5 h-5 sm:w-6 sm:h-6" />

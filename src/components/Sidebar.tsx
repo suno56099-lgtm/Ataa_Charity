@@ -15,6 +15,7 @@ import {
   MapPin,
   HeartHandshake,
   CheckCircle2,
+  Menu,
 } from 'lucide-react';
 import { UserRole } from '../types/index.ts';
 
@@ -189,7 +190,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </aside>
 
-      {/* Slide-over Drawer from the RIGHT: Floating rounded card */}
+      {/* Slide-over Drawer from the LEFT in phone mode: Floating rounded card */}
       {isMobileDrawerOpen && (
         <div className="fixed inset-0 z-50 animate-fade-in">
           {/* Backdrop */}
@@ -199,32 +200,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
             aria-hidden="true"
           />
 
-          {/* Drawer Sheet: Floating rounded card anchored on the right */}
-          <div className="fixed top-2 bottom-2 right-2 w-[calc(100%-1rem)] max-w-xs sm:max-w-sm bg-[#161D1A]/98 border border-[#26312C] rounded-3xl shadow-2xl flex flex-col z-50 overflow-hidden backdrop-blur-xl">
+          {/* Drawer Sheet: Compact floating rounded card anchored on the left */}
+          <div className="fixed top-2 bottom-2 left-2 w-52 max-w-[65vw] sm:w-60 bg-[#161D1A]/98 border border-[#26312C] rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden backdrop-blur-xl animate-slide-in-left">
             {/* Drawer Header */}
-            <div className="p-4 border-b border-[#26312C] flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#34C38F] to-[#10B981] flex items-center justify-center text-[#0F1412] shadow-md shadow-[#34C38F]/20">
-                  <HeartHandshake className="w-5 h-5" />
+            <div className="p-3 border-b border-[#26312C] flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#34C38F] to-[#10B981] flex items-center justify-center text-[#0F1412] shadow-sm shadow-[#34C38F]/20 flex-shrink-0">
+                  <HeartHandshake className="w-4 h-4" />
                 </div>
-                <div>
-                  <div className="text-sm font-bold text-[#E8EDEA]">جمعية عطاء الخيرية</div>
-                  <div className="text-[10px] text-[#8A9690]">قرية النسايمة</div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-[#E8EDEA] truncate">جمعية عطاء</div>
+                  <div className="text-[9px] text-[#8A9690] truncate">قرية النسايمة</div>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={onCloseMobileDrawer}
-                className="p-2 rounded-xl bg-[#1C2521] border border-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] transition cursor-pointer"
+                className="p-1.5 rounded-lg bg-[#1C2521] border border-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] transition cursor-pointer flex-shrink-0"
                 aria-label="إغلاق القائمة"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* All Tabs Navigation */}
-            <div className="flex-1 p-3 space-y-1 overflow-y-auto">
-              <div className="text-[11px] font-semibold text-[#8A9690] px-3 py-1 uppercase tracking-wider">
-                جميع أقسام المنظومة
+            <div className="flex-1 p-2 space-y-0.5 overflow-y-auto">
+              <div className="text-[10px] font-semibold text-[#8A9690] px-2 py-1 uppercase tracking-wider">
+                أقسام المنظومة
               </div>
               {visibleItems.map((item) => {
                 const Icon = item.icon;
@@ -232,35 +234,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 return (
                   <button
                     key={item.id}
+                    type="button"
                     onClick={() => handleSelectTab(item.id)}
-                    className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs sm:text-sm font-medium transition-all text-right cursor-pointer ${
+                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-medium transition-all text-right cursor-pointer ${
                       isActive
                         ? 'bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-bold shadow-sm'
                         : 'text-[#8A9690] hover:text-[#E8EDEA] hover:bg-[#1C2521] border border-transparent'
                     }`}
                   >
-                    <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[#34C38F]' : 'text-[#8A9690]'}`} />
+                    <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-[#34C38F]' : 'text-[#8A9690]'}`} />
                     <span className="flex-1 truncate">{item.label}</span>
                     {item.badge && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#E0B35A]/20 text-[#E0B35A] font-bold">
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-[#E0B35A]/20 text-[#E0B35A] font-bold flex-shrink-0">
                         {item.badge}
                       </span>
                     )}
-                    {isActive && <CheckCircle2 className="w-4 h-4 text-[#34C38F]" />}
+                    {isActive && <CheckCircle2 className="w-3.5 h-3.5 text-[#34C38F] flex-shrink-0" />}
                   </button>
                 );
               })}
             </div>
 
             {/* Drawer Village Notice */}
-            <div className="p-3.5 border-t border-[#26312C] bg-[#121815]/80 space-y-1 text-center">
-              <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-[#34C38F]">
-                <MapPin className="w-3.5 h-3.5" />
-                <span>منفذ توزيع قرية النسايمة</span>
+            <div className="p-2 border-t border-[#26312C] bg-[#121815]/80 text-center">
+              <div className="flex items-center justify-center gap-1 text-[9px] text-[#8A9690]">
+                <MapPin className="w-3 h-3 text-[#34C38F] flex-shrink-0" />
+                <span className="truncate">قرية النسايمة • عطاء 2026</span>
               </div>
-              <p className="text-[10px] text-[#8A9690]">
-                منظومة الدعم الذكية للأسر المستحقة بقرية النسايمة
-              </p>
             </div>
           </div>
         </div>
@@ -269,54 +269,71 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile Floating Bottom Navigation Bar */}
       <nav
         aria-label="شريط التنقل السفلي للهواتف"
-        className="md:hidden fixed bottom-2.5 left-2.5 right-2.5 z-40 bg-[#161D1A]/95 border border-[#26312C] rounded-2xl backdrop-blur-xl px-2 py-1.5 flex items-center justify-around shadow-2xl shadow-black/50"
+        className="md:hidden fixed bottom-2 left-2 right-2 z-40 bg-[#161D1A]/95 border border-[#26312C] rounded-2xl backdrop-blur-xl px-1.5 py-1 flex items-center justify-around shadow-2xl shadow-black/50"
       >
         {/* 1. Dashboard */}
         <button
+          type="button"
           onClick={() => handleSelectTab('dashboard')}
-          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition cursor-pointer min-w-[60px] active:scale-95 ${
+          className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition cursor-pointer flex-1 min-w-0 active:scale-95 ${
             activeTab === 'dashboard' ? 'text-[#34C38F] font-bold' : 'text-[#8A9690] hover:text-[#E8EDEA]'
           }`}
           title="الرئيسية"
         >
-          <LayoutDashboard className="w-4.5 h-4.5" />
-          <span className="text-[10px] mt-0.5">الرئيسية</span>
+          <LayoutDashboard className="w-4 h-4" />
+          <span className="text-[10px] mt-0.5 truncate">الرئيسية</span>
         </button>
 
         {/* 2. Beneficiaries */}
         <button
+          type="button"
           onClick={() => handleSelectTab('beneficiaries')}
-          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition cursor-pointer min-w-[60px] active:scale-95 ${
+          className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition cursor-pointer flex-1 min-w-0 active:scale-95 ${
             activeTab === 'beneficiaries' ? 'text-[#34C38F] font-bold' : 'text-[#8A9690] hover:text-[#E8EDEA]'
           }`}
           title="المستفيدون"
         >
-          <Users className="w-4.5 h-4.5" />
-          <span className="text-[10px] mt-0.5">المستفيدين</span>
+          <Users className="w-4 h-4" />
+          <span className="text-[10px] mt-0.5 truncate">المستفيدين</span>
         </button>
 
         {/* 3. Products */}
         <button
+          type="button"
           onClick={() => handleSelectTab('products')}
-          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition cursor-pointer min-w-[60px] active:scale-95 ${
+          className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition cursor-pointer flex-1 min-w-0 active:scale-95 ${
             activeTab === 'products' ? 'text-[#34C38F] font-bold' : 'text-[#8A9690] hover:text-[#E8EDEA]'
           }`}
           title="السلع التموينية"
         >
-          <Package className="w-4.5 h-4.5" />
-          <span className="text-[10px] mt-0.5">السلع</span>
+          <Package className="w-4 h-4" />
+          <span className="text-[10px] mt-0.5 truncate">السلع</span>
         </button>
 
-        {/* 4. Delivery (Highlight action) */}
+        {/* 4. Delivery */}
         <button
+          type="button"
           onClick={() => handleSelectTab('delivery')}
-          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition cursor-pointer min-w-[60px] relative active:scale-95 ${
+          className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition cursor-pointer flex-1 min-w-0 relative active:scale-95 ${
             activeTab === 'delivery' ? 'text-[#34C38F] font-bold' : 'text-[#8A9690] hover:text-[#E8EDEA]'
           }`}
           title="صرف وتسليم"
         >
-          <ShoppingBag className="w-4.5 h-4.5" />
-          <span className="text-[10px] mt-0.5">الصرف</span>
+          <ShoppingBag className="w-4 h-4" />
+          <span className="text-[10px] mt-0.5 truncate">الصرف</span>
+        </button>
+
+        {/* 5. More / Drawer */}
+        <button
+          type="button"
+          onClick={onOpenMobileDrawer}
+          className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition cursor-pointer flex-1 min-w-0 active:scale-95 ${
+            isMobileDrawerOpen ? 'text-[#34C38F] font-bold' : 'text-[#8A9690] hover:text-[#E8EDEA]'
+          }`}
+          title="المزيد من الأقسام"
+        >
+          <Menu className="w-4 h-4" />
+          <span className="text-[10px] mt-0.5 truncate">المزيد</span>
         </button>
       </nav>
     </>

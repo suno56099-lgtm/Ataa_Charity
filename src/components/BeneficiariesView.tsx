@@ -57,13 +57,15 @@ export const BeneficiariesView: React.FC<BeneficiariesViewProps> = ({
   const [pointsSuccess, setPointsSuccess] = useState<string | null>(null);
 
   // Filtered List
-  const filteredList = beneficiaries.filter((b) => {
+  const safeBeneficiaries = Array.isArray(beneficiaries) ? beneficiaries : [];
+  const filteredList = safeBeneficiaries.filter((b) => {
+    if (!b) return false;
     if (!searchQuery.trim()) return true;
     const q = searchQuery.trim().toLowerCase();
     return (
-      b.fullName.toLowerCase().includes(q) ||
-      b.phone.includes(q) ||
-      b.nationalId.includes(q)
+      (b.fullName || '').toLowerCase().includes(q) ||
+      (b.phone || '').includes(q) ||
+      (b.nationalId || '').includes(q)
     );
   });
 

@@ -27,26 +27,32 @@ export const LogsView: React.FC<LogsViewProps> = ({ deliveries, auditLogs }) => 
   const [selectedDeliveryForInvoice, setSelectedDeliveryForInvoice] = useState<DeliveryRecord | null>(null);
 
   // Filter deliveries
-  const filteredDeliveries = deliveries.filter((d) => {
+  const safeDeliveries = Array.isArray(deliveries) ? deliveries : [];
+  const safeAuditLogs = Array.isArray(auditLogs) ? auditLogs : [];
+
+  const filteredDeliveries = safeDeliveries.filter((d) => {
+    if (!d) return false;
+    const q = searchQuery.trim().toLowerCase();
     const matchesSearch =
-      !searchQuery.trim() ||
-      d.beneficiaryName.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
-      d.deliveryCode.includes(searchQuery.trim()) ||
-      d.staffName.toLowerCase().includes(searchQuery.trim().toLowerCase());
+      !q ||
+      (d.beneficiaryName || '').toLowerCase().includes(q) ||
+      (d.deliveryCode || '').includes(q) ||
+      (d.staffName || '').toLowerCase().includes(q);
     const matchesStaff = staffFilter === 'الكل' || d.staffName === staffFilter;
     return matchesSearch && matchesStaff;
   });
 
   // Unique staff names for filter dropdown
-  const uniqueStaff = Array.from(new Set(deliveries.map((d) => d.staffName)));
+  const uniqueStaff = Array.from(new Set(safeDeliveries.map((d) => d?.staffName).filter(Boolean))) as string[];
 
   // Filter audit logs
-  const filteredAuditLogs = auditLogs.filter((l) => {
+  const filteredAuditLogs = safeAuditLogs.filter((l) => {
+    if (!l) return false;
     if (!searchQuery.trim()) return true;
     const q = searchQuery.trim().toLowerCase();
     return (
-      l.actorName.toLowerCase().includes(q) ||
-      l.details.toLowerCase().includes(q) ||
+      (l.actorName || '').toLowerCase().includes(q) ||
+      (l.details || '').toLowerCase().includes(q) ||
       (l.targetName && l.targetName.toLowerCase().includes(q))
     );
   });

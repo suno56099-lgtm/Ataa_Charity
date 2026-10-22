@@ -41,19 +41,21 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
   const codes = dataService.getMonthlyCodes(selectedMonth);
 
   // Filtered codes based on search and status
+  const safeCodes = Array.isArray(codes) ? codes : [];
   const filteredCodes = useMemo(() => {
-    return codes.filter((c) => {
+    return safeCodes.filter((c) => {
+      if (!c) return false;
       if (statusFilter === 'available' && c.status !== 'available') return false;
       if (statusFilter === 'used' && c.status !== 'used') return false;
       if (!searchQuery.trim()) return true;
       const q = searchQuery.trim().toLowerCase();
       return (
-        c.beneficiaryName.toLowerCase().includes(q) ||
-        c.beneficiaryPhone.includes(q) ||
-        c.code.toLowerCase().includes(q)
+        (c.beneficiaryName || '').toLowerCase().includes(q) ||
+        (c.beneficiaryPhone || '').includes(q) ||
+        (c.code || '').toLowerCase().includes(q)
       );
     });
-  }, [codes, statusFilter, searchQuery]);
+  }, [safeCodes, statusFilter, searchQuery]);
 
   // Copy code helper
   const handleCopyCode = (id: string, code: string) => {
