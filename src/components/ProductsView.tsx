@@ -383,7 +383,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
       </div>
 
       {/* Navigation Tabs: Products vs Quantity Limits */}
-      <div className="flex items-center gap-2 border-b border-[#26312C] pb-2">
+      <div className="flex items-center gap-2 border-b border-[#26312C] pb-2 overflow-x-auto scrollbar-none">
         <button
           type="button"
           onClick={() => setActiveSection('products')}

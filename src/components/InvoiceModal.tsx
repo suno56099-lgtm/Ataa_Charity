@@ -366,7 +366,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
 
       {/* Printable Area Container (full continuous view on mobile, smooth overflow on desktop) */}
       <div
-        className={`p-1.5 sm:p-4 md:p-6 flex justify-center bg-[#0F1412] w-full ${
+        className={`p-1.5 sm:p-4 md:p-6 flex justify-center bg-[#0F1412] w-full overflow-x-auto ${
           isInline ? '' : 'sm:overflow-y-auto sm:flex-1 sm:overscroll-contain sm:min-h-0'
         }`}
       >
@@ -468,7 +468,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
 
           {/* 5. Items Table: الصنف, السعر, الكمية, الإجمالي. Plain numbers without any symbol or unit */}
           <div className="py-1 w-full overflow-x-auto">
-            <table className="w-full text-right text-xs border-collapse table-fixed">
+            <table className="w-full text-right text-xs border-collapse table-fixed min-w-[270px]">
               <thead>
                 <tr className="border-b border-gray-400 text-black font-bold text-[10px] sm:text-xs">
                   <th className="pb-1.5 text-right font-bold w-[40%] pr-0.5">الصنف</th>

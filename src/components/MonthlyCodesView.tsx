@@ -200,7 +200,7 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
           </div>
 
           {/* Status Filter Buttons */}
-          <div className="flex items-center gap-1.5 self-start sm:self-auto">
+          <div className="flex items-center gap-1.5 self-start sm:self-auto flex-wrap">
             <button
               onClick={() => setStatusFilter('all')}
               className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
@@ -392,7 +392,7 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#26312C]">
-                  {codes.map((c) => {
+                  {filteredCodes.map((c) => {
                     const isUsed = c.status === 'used';
                     const isCopied = copiedCodeId === c.id;
                     const { smsUrl } = buildSmsLink(c.beneficiaryPhone, c.code, c.monthKey);
@@ -524,12 +524,12 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
                 </div>
               )}
 
-              <div className="pt-3 border-t border-[#26312C] flex items-center justify-end gap-2.5">
+              <div className="pt-3 border-t border-[#26312C] flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5">
                 {!isSendingBulk && (
                   <button
                     type="button"
                     onClick={() => setIsBulkSmsOpen(false)}
-                    className="px-4 py-2 rounded-xl bg-[#1C2521] hover:bg-[#26312C] text-[#8A9690] transition"
+                    className="px-4 py-2 rounded-xl bg-[#1C2521] hover:bg-[#26312C] text-[#8A9690] transition text-center"
                   >
                     إلغاء
                   </button>
@@ -538,7 +538,7 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
                   type="button"
                   disabled={isSendingBulk}
                   onClick={handleStartBulkSms}
-                  className="px-5 py-2 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] disabled:opacity-50 text-[#0F1412] font-bold shadow-md transition flex items-center gap-2"
+                  className="px-5 py-2 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] disabled:opacity-50 text-[#0F1412] font-bold shadow-md transition flex items-center justify-center gap-2"
                 >
                   <Send className="w-4 h-4" />
                   <span>{isSendingBulk ? 'جارٍ الإرسال السحابي...' : 'بدء الإرسال الفوري لجميع المستفيدين'}</span>
