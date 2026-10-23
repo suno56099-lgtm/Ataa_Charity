@@ -16,8 +16,12 @@ import {
   HeartHandshake,
   CheckCircle2,
   Menu,
+  LogOut,
+  ShieldCheck,
+  UserCheck,
 } from 'lucide-react';
-import { UserRole } from '../types/index.ts';
+import { UserRole, StaffAccount } from '../types/index.ts';
+import { cleanPersonName } from '../utils/egyptianValidation.ts';
 
 export type ActiveTab =
   | 'dashboard'
@@ -33,6 +37,8 @@ interface SidebarProps {
   activeTab: ActiveTab;
   onSelectTab: (tab: ActiveTab) => void;
   userRole: UserRole;
+  currentUser?: StaffAccount | null;
+  onLogout?: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   isMobileDrawerOpen?: boolean;
@@ -40,17 +46,28 @@ interface SidebarProps {
   onOpenMobileDrawer?: () => void;
 }
 
+interface NavItem {
+  id: ActiveTab;
+  label: string;
+  shortLabel: string;
+  icon: React.ComponentType<{ className?: string }>;
+  adminOnly: boolean;
+  badge?: string;
+}
+
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onSelectTab,
   userRole,
+  currentUser,
+  onLogout,
   isCollapsed,
   onToggleCollapse,
   isMobileDrawerOpen = false,
   onCloseMobileDrawer,
   onOpenMobileDrawer,
 }) => {
-  const navItems = [
+  const navItems: NavItem[] = [
     {
       id: 'dashboard' as ActiveTab,
       label: 'لوحة التحكم',
@@ -74,15 +91,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'delivery' as ActiveTab,
-      label: 'صرف وتسليم فوري',
+      label: 'صرف وتسليم المستفيد',
       shortLabel: 'الصرف',
       icon: ShoppingBag,
       adminOnly: false,
-      badge: 'فوري',
     },
     {
       id: 'codes' as ActiveTab,
-      label: 'الأكواد الشهرية (OTP)',
+      label: 'الأكواد الشهرية',
       shortLabel: 'الأكواد',
       icon: KeyRound,
       adminOnly: false,
@@ -93,7 +109,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       shortLabel: 'الحاسبة',
       icon: Calculator,
       adminOnly: false,
-      badge: 'آلي',
     },
     {
       id: 'logs' as ActiveTab,
@@ -209,7 +224,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <HeartHandshake className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-bold text-[#E8EDEA] truncate">جمعية عطاء</div>
+                  <div className="text-xs font-bold text-[#E8EDEA] truncate">جمعية عطاء الخيرية</div>
                   <div className="text-[9px] text-[#8A9690] truncate">قرية النسايمة</div>
                 </div>
               </div>
@@ -254,6 +269,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 );
               })}
             </div>
+
+            {/* User Info & Logout inside Drawer for mobile convenience */}
+            {currentUser && (
+              <div className="p-2.5 border-t border-[#26312C] bg-[#1C2521]">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-[#26312C] flex items-center justify-center flex-shrink-0">
+                      {currentUser.role === 'admin' ? (
+                        <ShieldCheck className="w-4 h-4 text-[#E0B35A]" />
+                      ) : (
+                        <UserCheck className="w-4 h-4 text-[#34C38F]" />
+                      )}
+                    </div>
+                    <div className="min-w-0 text-right">
+                      <div className="text-xs font-bold text-[#E8EDEA] truncate">
+                        {cleanPersonName(currentUser.fullName) || currentUser.username}
+                      </div>
+                      <div className="text-[10px] text-[#8A9690] truncate">
+                        {currentUser.role === 'admin' ? 'مدير النظام' : 'مسؤول صرف'}
+                      </div>
+                    </div>
+                  </div>
+                  {onLogout && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onCloseMobileDrawer) onCloseMobileDrawer();
+                        onLogout();
+                      }}
+                      className="p-1.5 rounded-lg bg-[#26312C] text-[#8A9690] hover:text-[#F0707A] hover:bg-[#F0707A]/15 active:scale-95 transition cursor-pointer flex-shrink-0"
+                      title="تسجيل الخروج"
+                      aria-label="تسجيل الخروج"
+                    >
+                      <LogOut className="w-4 h-4 rotate-180" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Drawer Village Notice */}
             <div className="p-2 border-t border-[#26312C] bg-[#121815]/80 text-center">

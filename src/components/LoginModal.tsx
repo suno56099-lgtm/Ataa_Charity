@@ -84,7 +84,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin أو tarek_staff"
+                placeholder="اسم المستخدم (admin)"
                 className="w-full bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-3 text-sm text-[#E8EDEA] focus:outline-none focus:border-[#34C38F] transition font-mono pr-10"
               />
               <User className="w-4 h-4 text-[#8A9690] absolute right-3 top-3.5" />
@@ -116,43 +116,27 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
           </button>
         </form>
 
-        {/* Quick Demo Credentials */}
+        {/* Quick Login Helper */}
         <div className="pt-4 border-t border-[#26312C] space-y-2">
           <div className="text-[11px] text-[#8A9690] flex items-center justify-between">
-            <span>حسابات تجريبية سريعة:</span>
+            <span>بيانات الحساب الرئيسي:</span>
             <span className="text-[10px] text-[#34C38F] flex items-center gap-1">
               <Sparkles className="w-3 h-3" />
-              <span>جاهزة للنقر</span>
+              <span>جاهز للتعبئة</span>
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => fillQuickDemo('admin', 'admin123')}
-              className="p-2.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-right transition"
-            >
-              <div className="flex items-center gap-1.5 font-bold text-[#E0B35A]">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>مدير النظام</span>
-              </div>
-              <div className="text-[10px] text-[#8A9690] font-mono mt-0.5">admin / admin123</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => fillQuickDemo('tarek_staff', 'staff123')}
-              className="p-2.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-right transition"
-            >
-              <div className="flex items-center gap-1.5 font-bold text-[#34C38F]">
-                <UserCheck className="w-3.5 h-3.5" />
-                <span>مسؤول صرف</span>
-              </div>
-              <div className="text-[10px] text-[#8A9690] font-mono mt-0.5">
-                tarek_staff / staff123
-              </div>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => fillQuickDemo('admin', 'admin123')}
+            className="w-full p-2.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-right transition flex items-center justify-between"
+          >
+            <div className="flex items-center gap-2 font-bold text-[#E0B35A]">
+              <ShieldCheck className="w-4 h-4" />
+              <span>مدير المنظومة</span>
+            </div>
+            <div className="text-[11px] text-[#8A9690] font-mono">admin / admin123</div>
+          </button>
         </div>
       </div>
     </div>

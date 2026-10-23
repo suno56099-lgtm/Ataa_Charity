@@ -10,10 +10,11 @@ import {
   ArrowRight,
   ShieldCheck,
   RotateCcw,
+  Lock,
 } from 'lucide-react';
 import { Product, Beneficiary, MonthlyCode, DeliveryRecord, StaffAccount } from '../types/index.ts';
 import { dataService } from '../services/dataService.ts';
-import { CartItem } from '../utils/deliveryRules.ts';
+import { CartItem, formatMonthArabic } from '../utils/deliveryRules.ts';
 import { maskNationalId } from '../utils/egyptianValidation.ts';
 import { InvoiceModal } from './InvoiceModal.tsx';
 
@@ -28,7 +29,8 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
   currentUser,
   onRefresh,
 }) => {
-  const currentMonth = '2026-10'; // October 2026
+  const currentMonth = dataService.getActiveMonth();
+  const isMonthClosed = dataService.isMonthClosed(currentMonth);
 
   // Flow State: 'verify_code' | 'pick_items' | 'success_receipt'
   const [step, setStep] = useState<'verify_code' | 'pick_items' | 'success_receipt'>('verify_code');
@@ -55,8 +57,13 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
     const code = (codeToVerify || inputCode).trim();
     setVerifyError(null);
 
+    if (isMonthClosed) {
+      setVerifyError(`دورة صرف شهر ${formatMonthArabic(currentMonth)} مغلقة (تم تسليمه بالكامل)، ولا يمكن تنفيذ عمليات صرف جديدة.`);
+      return;
+    }
+
     if (!code) {
-      setVerifyError('يرجى إدخال كود الاستلام المكون من 6 أرقام');
+      setVerifyError('يرجى إدخال كود الاستلام المكون من 6 أرقام أو الكود كاملاً');
       return;
     }
 
@@ -71,12 +78,6 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
     // Initialize empty cart or standard basic food basket
     setCart([]);
     setStep('pick_items');
-  };
-
-  // Quick fill helper for demo convenience
-  const handleQuickDemoCode = (code: string) => {
-    setInputCode(code);
-    handleVerify(code);
   };
 
   // Cart Management
@@ -215,13 +216,30 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
               تسليم مستفيد
             </h1>
             <p className="text-xs text-[#8A9690] mt-1.5 max-w-md mx-auto leading-relaxed">
-              أدخل كود الاستلام الشهري المعتمد (مثال: ataa2610482915) والمستلم من قبل المستفيد عبر رسالة SMS
-              لشهر أكتوبر 2026.
+              أدخل كود الاستلام الشهري المعتمد والمستلم من قبل المستفيد عبر رسالة SMS
+              لشهر {formatMonthArabic(currentMonth)}.
             </p>
             <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1C2521] border border-[#26312C] text-xs text-[#E0B35A]">
-              <span>منفذ التوزيع: مقر الجمعية الرئيسي بالقرية • خدمة أهالي قرية النسايمة</span>
+              <span>منفذ التوزيع: مقر الجمعية الرئيسي بالقرية</span>
             </div>
           </div>
+
+          {isMonthClosed && (
+            <div className="p-4 rounded-xl bg-[#E0B35A]/15 border border-[#E0B35A]/40 text-[#E0B35A] text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-right">
+              <div className="flex items-center gap-2.5">
+                <Lock className="w-5 h-5 flex-shrink-0 text-[#E0B35A]" />
+                <div>
+                  <div className="font-bold text-sm">دورة شهر {formatMonthArabic(currentMonth)} مغلقة (تم تسليمه بالكامل)</div>
+                  <div className="text-[11px] text-[#8A9690] mt-0.5">
+                    تم إغلاق دورة الصرف لهذا الشهر، ولا يمكن تسجيل عمليات صرف جديدة. يمكنك فتح دورة شهر جديد من قسم الأكواد الشهرية.
+                  </div>
+                </div>
+              </div>
+              <span className="self-start sm:self-center px-2.5 py-1 rounded-full bg-[#E0B35A]/20 text-[#E0B35A] font-bold text-[10px] whitespace-nowrap">
+                تم تسليمه
+              </span>
+            </div>
+          )}
 
           {verifyError && (
             <div className="p-3.5 rounded-xl bg-[#F0707A]/15 border border-[#F0707A]/30 text-[#F0707A] text-xs flex items-center justify-center gap-2">
@@ -237,53 +255,25 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
               autoComplete="off"
               autoCapitalize="none"
               spellCheck="false"
+              disabled={isMonthClosed}
               value={inputCode}
               onChange={(e) => setInputCode(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleVerify();
+                if (e.key === 'Enter' && !isMonthClosed) handleVerify();
               }}
-              placeholder="مثال: ataa2610482915"
-              className="w-full max-w-sm mx-auto text-center font-mono text-base sm:text-lg font-extrabold tracking-wider px-4 py-3 rounded-2xl bg-[#1C2521] border-2 border-[#26312C] focus:border-[#34C38F] text-[#E0B35A] focus:outline-none shadow-inner"
+              placeholder={isMonthClosed ? 'الشهر مغلق ولا يقبل الصرف' : 'أدخل كود الاستلام الشهري...'}
+              className="w-full max-w-sm mx-auto text-center font-mono text-base sm:text-lg font-extrabold tracking-wider px-4 py-3 rounded-2xl bg-[#1C2521] border-2 border-[#26312C] focus:border-[#34C38F] text-[#E0B35A] focus:outline-none shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
             />
 
             <div>
               <button
                 type="button"
                 onClick={() => handleVerify()}
-                className="w-full max-w-sm mx-auto flex items-center justify-center gap-2 py-3 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] text-[#0F1412] font-bold text-sm shadow-lg transition active:scale-95 cursor-pointer"
+                disabled={isMonthClosed}
+                className="w-full max-w-sm mx-auto flex items-center justify-center gap-2 py-3 rounded-xl bg-[#34C38F] hover:bg-[#2bb27f] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#34C38F] text-[#0F1412] font-bold text-sm shadow-lg transition active:scale-95 cursor-pointer"
               >
                 <span>التحقق من الكود والمستفيد</span>
                 <ArrowRight className="w-4 h-4 rotate-180" />
-              </button>
-            </div>
-          </div>
-
-          {/* Quick Demo Code Helpers */}
-          <div className="pt-6 border-t border-[#26312C]">
-            <span className="text-[11px] text-[#8A9690] block mb-2 font-medium">
-              أكواد تجريبية جاهزة للتجربة الفورية:
-            </span>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickDemoCode('ataa2610482915')}
-                className="px-3 py-1.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-xs font-mono text-[#E0B35A] transition cursor-pointer"
-              >
-                ataa2610482915 (فاطمة - 120 نقطة)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickDemoCode('ataa2610739104')}
-                className="px-3 py-1.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-xs font-mono text-[#E0B35A] transition cursor-pointer"
-              >
-                ataa2610739104 (محمود - 141 نقطة)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickDemoCode('ataa2610195820')}
-                className="px-3 py-1.5 rounded-xl bg-[#1C2521] hover:bg-[#26312C] border border-[#26312C] text-xs font-mono text-[#E0B35A] transition cursor-pointer"
-              >
-                ataa2610195820 (زينب - 99 نقطة)
               </button>
             </div>
           </div>

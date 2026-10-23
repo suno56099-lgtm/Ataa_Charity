@@ -14,6 +14,8 @@ import {
   DeliveryItemRecord,
   AuditLogEntry,
   DashboardMetrics,
+  DistributionMonthInfo,
+  MonthStatus,
 } from '../types/index.ts';
 import {
   generateSixDigitCode,
@@ -34,56 +36,34 @@ import {
 } from '../utils/egyptianValidation.ts';
 
 const STORAGE_KEYS = {
-  CURRENT_USER: 'ataa_current_user',
-  STAFF: 'ataa_staff_v4',
-  BENEFICIARIES: 'ataa_beneficiaries_v4',
+  CURRENT_USER: 'ataa_current_user_v5',
+  STAFF: 'ataa_staff_v5',
+  BENEFICIARIES: 'ataa_beneficiaries_v5',
   PRODUCTS: 'ataa_products_v5',
-  MONTHLY_CODES: 'ataa_monthly_codes_v4',
-  DELIVERIES: 'ataa_deliveries_v4',
-  AUDIT_LOGS: 'ataa_audit_logs_v4',
-  LOGIN_ATTEMPTS: 'ataa_login_attempts_v4',
-  POINTS_TIERS: 'ataa_points_tiers_v4',
+  MONTHLY_CODES: 'ataa_monthly_codes_v5',
+  DELIVERIES: 'ataa_deliveries_v5',
+  AUDIT_LOGS: 'ataa_audit_logs_v5',
+  LOGIN_ATTEMPTS: 'ataa_login_attempts_v5',
+  POINTS_TIERS: 'ataa_points_tiers_v5',
   PRODUCT_LIMITS: 'ataa_product_limits_v5',
-  SETTINGS: 'ataa_settings_v1',
+  SETTINGS: 'ataa_settings_v5',
+  DISTRIBUTION_MONTHS: 'ataa_distribution_months_v5',
+  ACTIVE_MONTH: 'ataa_active_month_v5',
 };
 
-// Seed Data
+// Official Administrator Account (No fake staff credentials)
 const INITIAL_STAFF: StaffAccount[] = [
   {
     id: 'a1111111-1111-1111-1111-111111111111',
     username: 'admin',
     email: 'admin@ataa.org.eg',
-    fullName: 'مصطفى الشريف',
+    fullName: 'مدير المنظومة',
     role: 'admin',
-    phone: '01012345678',
-    nationalId: '28001011200159',
+    phone: '',
+    nationalId: '',
     isActive: true,
     createdAt: '2026-08-01T08:00:00Z',
     lastLoginAt: '2026-10-16T12:30:00Z',
-  },
-  {
-    id: 'a2222222-2222-2222-2222-222222222222',
-    username: 'tarek_staff',
-    email: 'tarek@ataa.org.eg',
-    fullName: 'طارق حسام الدين',
-    role: 'staff',
-    phone: '01123456789',
-    nationalId: '29005121400873',
-    isActive: true,
-    createdAt: '2026-08-15T09:00:00Z',
-    lastLoginAt: '2026-10-16T14:10:00Z',
-  },
-  {
-    id: 'a3333333-3333-3333-3333-333333333333',
-    username: 'mona_staff',
-    email: 'mona@ataa.org.eg',
-    fullName: 'منى عبد العزيز',
-    role: 'staff',
-    phone: '01234567890',
-    nationalId: '29208241201984',
-    isActive: true,
-    createdAt: '2026-09-01T08:30:00Z',
-    lastLoginAt: '2026-10-15T16:00:00Z',
   },
 ];
 
@@ -210,179 +190,11 @@ const INITIAL_PRODUCTS: Product[] = [
   },
 ];
 
-const INITIAL_BENEFICIARIES: Beneficiary[] = [
-  {
-    id: 'b1',
-    nationalId: '28503140101234',
-    fullName: 'فاطمة محمد السيد حسن',
-    phone: '01014589231',
-    address: 'قرية النسايمة',
-    familySize: 5,
-    pointsBalance: 120,
-    notes: 'أرملة تعول 4 أبناء في مراحل التعليم',
-    isActive: true,
-    createdAt: '2026-08-10T10:00:00Z',
-    updatedAt: '2026-10-01T08:00:00Z',
-  },
-  {
-    id: 'b2',
-    nationalId: '27911052402145',
-    fullName: 'محمود عبد الرحمن خليل',
-    phone: '01128945671',
-    address: 'قرية النسايمة',
-    familySize: 6,
-    pointsBalance: 141,
-    notes: 'عامل يومية غير منتظم - رب أسرة',
-    isActive: true,
-    createdAt: '2026-08-12T11:00:00Z',
-    updatedAt: '2026-10-01T08:00:00Z',
-  },
-  {
-    id: 'b3',
-    nationalId: '30107202100892',
-    fullName: 'زينب علي إبراهيم غانم',
-    phone: '01278451290',
-    address: 'قرية النسايمة',
-    familySize: 4,
-    pointsBalance: 99,
-    notes: 'ربة منزل - مسنون بحاجة لرعاية',
-    isActive: true,
-    createdAt: '2026-08-15T09:30:00Z',
-    updatedAt: '2026-10-01T08:00:00Z',
-  },
-  {
-    id: 'b4',
-    nationalId: '29209121603587',
-    fullName: 'أحمد كمال الدين بدر',
-    phone: '01551239845',
-    address: 'قرية النسايمة',
-    familySize: 5,
-    pointsBalance: 120,
-    notes: 'من ذوي الاحتياجات الخاصة (إعاقة حركية)',
-    isActive: true,
-    createdAt: '2026-09-02T13:00:00Z',
-    updatedAt: '2026-10-01T08:00:00Z',
-  },
-  {
-    id: 'b5',
-    nationalId: '28804250204781',
-    fullName: 'سعاد عبد الفتاح بدوي',
-    phone: '01096325874',
-    address: 'قرية النسايمة',
-    familySize: 3,
-    pointsBalance: 78,
-    notes: 'مطلقة تعول طفلين',
-    isActive: true,
-    createdAt: '2026-09-10T14:20:00Z',
-    updatedAt: '2026-10-01T08:00:00Z',
-  },
-];
+const INITIAL_BENEFICIARIES: Beneficiary[] = [];
 
-const INITIAL_CODES: MonthlyCode[] = [
-  {
-    id: 'c1',
-    beneficiaryId: 'b1',
-    beneficiaryName: 'فاطمة محمد السيد حسن',
-    beneficiaryPhone: '01014589231',
-    beneficiaryNationalId: '28503140101234',
-    monthKey: '2026-10',
-    code: 'ataa2610482915',
-    status: 'available',
-    createdAt: '2026-10-01T08:00:00Z',
-  },
-  {
-    id: 'c2',
-    beneficiaryId: 'b2',
-    beneficiaryName: 'محمود عبد الرحمن خليل',
-    beneficiaryPhone: '01128945671',
-    beneficiaryNationalId: '27911052402145',
-    monthKey: '2026-10',
-    code: 'ataa2610739104',
-    status: 'available',
-    createdAt: '2026-10-01T08:00:00Z',
-  },
-  {
-    id: 'c3',
-    beneficiaryId: 'b3',
-    beneficiaryName: 'زينب علي إبراهيم غانم',
-    beneficiaryPhone: '01278451290',
-    beneficiaryNationalId: '30107202100892',
-    monthKey: '2026-10',
-    code: 'ataa2610195820',
-    status: 'available',
-    createdAt: '2026-10-01T08:00:00Z',
-  },
-  {
-    id: 'c4',
-    beneficiaryId: 'b4',
-    beneficiaryName: 'أحمد كمال الدين بدر',
-    beneficiaryPhone: '01551239845',
-    beneficiaryNationalId: '29209121603587',
-    monthKey: '2026-10',
-    code: 'ataa2610654321',
-    status: 'available',
-    createdAt: '2026-10-01T08:00:00Z',
-  },
-  {
-    id: 'c5',
-    beneficiaryId: 'b5',
-    beneficiaryName: 'سعاد عبد الفتاح بدوي',
-    beneficiaryPhone: '01096325874',
-    beneficiaryNationalId: '28804250204781',
-    monthKey: '2026-10',
-    code: 'ataa2610981245',
-    status: 'available',
-    createdAt: '2026-10-01T08:00:00Z',
-  },
-];
+const INITIAL_CODES: MonthlyCode[] = [];
 
-const INITIAL_DELIVERIES: DeliveryRecord[] = [
-  {
-    id: 'del_1001',
-    codeId: 'c1',
-    deliveryCode: 'ataa2610482915',
-    beneficiaryId: 'b1',
-    beneficiaryName: 'فاطمة محمد السيد حسن',
-    beneficiaryPhone: '01014589231',
-    staffId: 'a2222222-2222-2222-2222-222222222222',
-    staffName: 'طارق حسام الدين',
-    totalPoints: 94,
-    balanceBefore: 120,
-    balanceAfter: 26,
-    expired_points: 26,
-    items: [
-      { id: 'di_1', deliveryId: 'del_1001', productId: 'prod_1', productName: 'زيت طعام خليط 800 مل', unitPoints: 12, quantity: 2, subtotalPoints: 24 },
-      { id: 'di_2', deliveryId: 'del_1001', productId: 'prod_2', productName: 'أرز مصري معبأ 1 كجم', unitPoints: 10, quantity: 3, subtotalPoints: 30 },
-      { id: 'di_3', deliveryId: 'del_1001', productId: 'prod_3', productName: 'سكر ناعم 1 كجم', unitPoints: 10, quantity: 2, subtotalPoints: 20 },
-      { id: 'di_4', deliveryId: 'del_1001', productId: 'prod_4', productName: 'مكرونة 400 جم', unitPoints: 4, quantity: 4, subtotalPoints: 16 },
-      { id: 'di_5', deliveryId: 'del_1001', productId: 'prod_5', productName: 'شاي ناعم 40 جم', unitPoints: 2, quantity: 2, subtotalPoints: 4 },
-    ],
-    notes: 'تسليم الحصة التموينية لشهر أكتوبر 2026 بمقر الجمعية',
-    createdAt: '2026-10-17T10:30:00Z',
-  },
-  {
-    id: 'del_1002',
-    codeId: 'c2',
-    deliveryCode: 'ataa2610739104',
-    beneficiaryId: 'b2',
-    beneficiaryName: 'محمود عبد الرحمن خليل',
-    beneficiaryPhone: '01128945671',
-    staffId: 'a2222222-2222-2222-2222-222222222222',
-    staffName: 'طارق حسام الدين',
-    totalPoints: 134,
-    balanceBefore: 141,
-    balanceAfter: 7,
-    expired_points: 7,
-    items: [
-      { id: 'di_6', deliveryId: 'del_1002', productId: 'prod_1', productName: 'زيت طعام خليط 800 مل', unitPoints: 12, quantity: 2, subtotalPoints: 24 },
-      { id: 'di_7', deliveryId: 'del_1002', productId: 'prod_7', productName: 'عدس بجبة 400 جرام - ماركت', unitPoints: 5, quantity: 2, subtotalPoints: 10 },
-      { id: 'di_8', deliveryId: 'del_1002', productId: 'prod_2', productName: 'سكر 400 جرام - ماركت', unitPoints: 3, quantity: 4, subtotalPoints: 12 },
-      { id: 'di_9', deliveryId: 'del_1002', productId: 'prod_3', productName: 'زيت طعام 500 مللي', unitPoints: 10, quantity: 2, subtotalPoints: 20 },
-    ],
-    notes: 'تسليم حصة الأسرة لشهر أكتوبر 2026',
-    createdAt: '2026-10-17T14:15:00Z',
-  },
-];
+const INITIAL_DELIVERIES: DeliveryRecord[] = [];
 
 const INITIAL_PRODUCT_LIMITS: ProductQuantityLimit[] = [
   // Family size 1: rice 1, sugar 1, oil 1
@@ -421,28 +233,7 @@ const INITIAL_PRODUCT_LIMITS: ProductQuantityLimit[] = [
   { id: 'lim_f7_oil', productId: 'prod_3', productName: 'زيت طعام 500 مللي', familySize: 7, maxQuantity: 3, createdAt: '2026-10-01T00:00:00Z' },
 ];
 
-const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
-  {
-    id: 'l1',
-    action: 'GENERATE_CODES',
-    actorId: 'a1111111-1111-1111-1111-111111111111',
-    actorName: 'أ. مصطفى الشريف',
-    actorRole: 'admin',
-    targetName: 'أكواد شهر أكتوبر 2026',
-    details: 'تم توليد الأكواد الشهرية الذكية لجميع المستفيدين النشطين بإجمالي 5 أكواد',
-    createdAt: '2026-10-01T08:01:00Z',
-  },
-  {
-    id: 'l2',
-    action: 'STAFF_LOGIN',
-    actorId: 'a2222222-2222-2222-2222-222222222222',
-    actorName: 'طارق حسام الدين',
-    actorRole: 'staff',
-    targetName: 'تسجيل دخول المنظومة',
-    details: 'تسجيل دخول ناجح لحساب مسؤول الصرف',
-    createdAt: '2026-10-16T14:10:00Z',
-  },
-];
+const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [];
 
 class DataService {
   private memoryStorage: Record<string, string> = {};
@@ -492,25 +283,47 @@ class DataService {
   }
 
   constructor() {
-    // Seed initial data safely if empty
-    if (!this.getStorage<StaffAccount[] | null>(STORAGE_KEYS.STAFF, null)) {
-      this.setStorage(STORAGE_KEYS.STAFF, INITIAL_STAFF);
-    }
+    // Purge legacy storage keys with mock data from previous builds
+    const legacyKeys = [
+      'ataa_beneficiaries_v4',
+      'ataa_monthly_codes_v4',
+      'ataa_deliveries_v4',
+      'ataa_audit_logs_v4',
+      'ataa_staff_v4',
+      'ataa_current_user',
+    ];
+    legacyKeys.forEach((key) => this.removeStorage(key));
+
+    // Filter out any mock entries by legacy IDs
+    const mockBenIds = new Set(['b1', 'b2', 'b3', 'b4', 'b5']);
+    const mockDelIds = new Set(['del_1001', 'del_1002']);
+    const mockCodeIds = new Set(['c1', 'c2', 'c3', 'c4', 'c5']);
+    const mockLogIds = new Set(['l1', 'l2']);
+    const mockStaffIds = new Set(['a2222222-2222-2222-2222-222222222222', 'a3333333-3333-3333-3333-333333333333']);
+
+    const currentBens = this.getStorage<Beneficiary[]>(STORAGE_KEYS.BENEFICIARIES, []);
+    const cleanBens = currentBens.filter((b) => !mockBenIds.has(b.id));
+    this.setStorage(STORAGE_KEYS.BENEFICIARIES, cleanBens);
+
+    const currentDels = this.getStorage<DeliveryRecord[]>(STORAGE_KEYS.DELIVERIES, []);
+    const cleanDels = currentDels.filter((d) => !mockDelIds.has(d.id));
+    this.setStorage(STORAGE_KEYS.DELIVERIES, cleanDels);
+
+    const currentCodes = this.getStorage<MonthlyCode[]>(STORAGE_KEYS.MONTHLY_CODES, []);
+    const cleanCodes = currentCodes.filter((c) => !mockCodeIds.has(c.id));
+    this.setStorage(STORAGE_KEYS.MONTHLY_CODES, cleanCodes);
+
+    const currentLogs = this.getStorage<AuditLogEntry[]>(STORAGE_KEYS.AUDIT_LOGS, []);
+    const cleanLogs = currentLogs.filter((l) => !mockLogIds.has(l.id));
+    this.setStorage(STORAGE_KEYS.AUDIT_LOGS, cleanLogs);
+
+    const currentStaff = this.getStorage<StaffAccount[]>(STORAGE_KEYS.STAFF, INITIAL_STAFF);
+    const cleanStaff = currentStaff.filter((s) => !mockStaffIds.has(s.id));
+    this.setStorage(STORAGE_KEYS.STAFF, cleanStaff.length > 0 ? cleanStaff : INITIAL_STAFF);
+
+    // Seed products & limits if empty
     if (!this.getStorage<Product[] | null>(STORAGE_KEYS.PRODUCTS, null)) {
       this.setStorage(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
-    }
-    if (!this.getStorage<Beneficiary[] | null>(STORAGE_KEYS.BENEFICIARIES, null)) {
-      this.setStorage(STORAGE_KEYS.BENEFICIARIES, INITIAL_BENEFICIARIES);
-    }
-    if (!this.getStorage<MonthlyCode[] | null>(STORAGE_KEYS.MONTHLY_CODES, null)) {
-      this.setStorage(STORAGE_KEYS.MONTHLY_CODES, INITIAL_CODES);
-    }
-    const currentDeliveries = this.getStorage<DeliveryRecord[]>(STORAGE_KEYS.DELIVERIES, []);
-    if (!currentDeliveries || currentDeliveries.length === 0) {
-      this.setStorage(STORAGE_KEYS.DELIVERIES, INITIAL_DELIVERIES);
-    }
-    if (!this.getStorage<AuditLogEntry[] | null>(STORAGE_KEYS.AUDIT_LOGS, null)) {
-      this.setStorage(STORAGE_KEYS.AUDIT_LOGS, INITIAL_AUDIT_LOGS);
     }
   }
 
@@ -1506,6 +1319,194 @@ class DataService {
     return { success: true, createdCount };
   }
 
+  // ================= Month & Cycle Management =================
+  getActiveMonth(): string {
+    const active = this.getStorage<string>(STORAGE_KEYS.ACTIVE_MONTH, '2026-10');
+    return active || '2026-10';
+  }
+
+  setActiveMonth(monthKey: string): void {
+    if (!monthKey) return;
+    this.setStorage(STORAGE_KEYS.ACTIVE_MONTH, monthKey);
+    const months = this.getDistributionMonths();
+    if (!months.find((m) => m.monthKey === monthKey)) {
+      months.unshift({
+        monthKey,
+        status: 'open',
+        openedAt: new Date().toISOString(),
+      });
+      this.setStorage(STORAGE_KEYS.DISTRIBUTION_MONTHS, months);
+    }
+    const current = this.getCurrentUser();
+    if (current) {
+      this.recordAuditLog({
+        action: 'ACTIVE_MONTH_SET',
+        actorId: current.id,
+        actorName: current.fullName,
+        actorRole: current.role,
+        targetName: `شهر ${formatMonthArabic(monthKey)}`,
+        details: `تعيين شهر ${formatMonthArabic(monthKey)} كشهر نشط للصرف بالمنظومة`,
+      });
+    }
+  }
+
+  getDistributionMonths(): DistributionMonthInfo[] {
+    const defaultMonths: DistributionMonthInfo[] = [
+      {
+        monthKey: '2026-10',
+        status: 'open',
+        openedAt: '2026-10-01T00:00:00Z',
+      },
+    ];
+    let months = this.getStorage<DistributionMonthInfo[]>(STORAGE_KEYS.DISTRIBUTION_MONTHS, defaultMonths);
+    if (!Array.isArray(months) || months.length === 0) {
+      months = defaultMonths;
+      this.setStorage(STORAGE_KEYS.DISTRIBUTION_MONTHS, months);
+    }
+    // Also discover any months that have codes or deliveries
+    const allCodes = this.getStorage<MonthlyCode[]>(STORAGE_KEYS.MONTHLY_CODES, []);
+    allCodes.forEach((c) => {
+      if (c?.monthKey && !months.find((m) => m.monthKey === c.monthKey)) {
+        months.push({
+          monthKey: c.monthKey,
+          status: 'open',
+          openedAt: c.createdAt || new Date().toISOString(),
+        });
+      }
+    });
+    const uniqueMap = new Map<string, DistributionMonthInfo>();
+    months.forEach((m) => {
+      if (!uniqueMap.has(m.monthKey)) {
+        uniqueMap.set(m.monthKey, m);
+      }
+    });
+    return Array.from(uniqueMap.values()).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+  }
+
+  getMonthInfo(monthKey: string): DistributionMonthInfo | null {
+    const months = this.getDistributionMonths();
+    return months.find((m) => m.monthKey === monthKey) || null;
+  }
+
+  isMonthClosed(monthKey: string): boolean {
+    const info = this.getMonthInfo(monthKey);
+    return info ? info.status === 'closed' : false;
+  }
+
+  closeMonth(monthKey: string, notes?: string): { success: boolean; error?: string } {
+    const months = this.getDistributionMonths();
+    const target = months.find((m) => m.monthKey === monthKey);
+    const current = this.getCurrentUser();
+    const staffName = current ? current.fullName : 'إدارة الجمعية';
+
+    if (!target) {
+      months.unshift({
+        monthKey,
+        status: 'closed',
+        openedAt: '2026-10-01T00:00:00Z',
+        closedAt: new Date().toISOString(),
+        closedByStaffName: staffName,
+        notes,
+      });
+    } else {
+      target.status = 'closed';
+      target.closedAt = new Date().toISOString();
+      target.closedByStaffName = staffName;
+      if (notes) target.notes = notes;
+    }
+
+    this.setStorage(STORAGE_KEYS.DISTRIBUTION_MONTHS, months);
+
+    if (current) {
+      this.recordAuditLog({
+        action: 'MONTH_CLOSE',
+        actorId: current.id,
+        actorName: current.fullName,
+        actorRole: current.role,
+        targetName: `شهر ${formatMonthArabic(monthKey)}`,
+        details: `إغلاق دورة صرف شهر ${formatMonthArabic(monthKey)} - تم إتمام التسليم بالكامل وإغلاق الشهر`,
+      });
+    }
+
+    return { success: true };
+  }
+
+  reopenMonth(monthKey: string): { success: boolean; error?: string } {
+    const months = this.getDistributionMonths();
+    const target = months.find((m) => m.monthKey === monthKey);
+    if (target) {
+      target.status = 'open';
+      delete target.closedAt;
+      delete target.closedByStaffName;
+      this.setStorage(STORAGE_KEYS.DISTRIBUTION_MONTHS, months);
+    }
+    const current = this.getCurrentUser();
+    if (current) {
+      this.recordAuditLog({
+        action: 'MONTH_OPEN',
+        actorId: current.id,
+        actorName: current.fullName,
+        actorRole: current.role,
+        targetName: `شهر ${formatMonthArabic(monthKey)}`,
+        details: `إعادة فتح دورة صرف شهر ${formatMonthArabic(monthKey)} لاستئناف الصرف`,
+      });
+    }
+    return { success: true };
+  }
+
+  openNewMonth(newMonthKey: string, autoGenerateCodes = true): {
+    success: boolean;
+    error?: string;
+    createdCodesCount?: number;
+  } {
+    if (!/^\d{4}-\d{2}$/.test(newMonthKey)) {
+      return { success: false, error: 'صيغة الشهر غير صحيحة، يجب أن تكون بتنسيق YYYY-MM مثل 2026-11' };
+    }
+
+    const months = this.getDistributionMonths();
+    const existing = months.find((m) => m.monthKey === newMonthKey);
+    if (existing) {
+      if (existing.status === 'closed') {
+        existing.status = 'open';
+        delete existing.closedAt;
+        delete existing.closedByStaffName;
+        this.setStorage(STORAGE_KEYS.DISTRIBUTION_MONTHS, months);
+      }
+      this.setActiveMonth(newMonthKey);
+      return { success: true, createdCodesCount: 0 };
+    }
+
+    months.unshift({
+      monthKey: newMonthKey,
+      status: 'open',
+      openedAt: new Date().toISOString(),
+    });
+    this.setStorage(STORAGE_KEYS.DISTRIBUTION_MONTHS, months);
+    this.setActiveMonth(newMonthKey);
+
+    let createdCodesCount = 0;
+    if (autoGenerateCodes) {
+      const res = this.generateCodesForMonth(newMonthKey);
+      if (res.success) {
+        createdCodesCount = res.createdCount;
+      }
+    }
+
+    const current = this.getCurrentUser();
+    if (current) {
+      this.recordAuditLog({
+        action: 'MONTH_CREATE',
+        actorId: current.id,
+        actorName: current.fullName,
+        actorRole: current.role,
+        targetName: `شهر ${formatMonthArabic(newMonthKey)}`,
+        details: `فتح دورة تموينية جديدة لشهر ${formatMonthArabic(newMonthKey)} وتوليد ${createdCodesCount} كود استلام`,
+      });
+    }
+
+    return { success: true, createdCodesCount };
+  }
+
   // ================= Delivery & Atomic RPC =================
   verifyCodeForDelivery(inputCode: string, currentMonth: string): {
     isValid: boolean;
@@ -1513,6 +1514,12 @@ class DataService {
     codeRecord?: MonthlyCode;
     beneficiary?: Beneficiary;
   } {
+    if (this.isMonthClosed(currentMonth)) {
+      return {
+        isValid: false,
+        error: `دورة صرف شهر ${formatMonthArabic(currentMonth)} مغلقة (تم تسليمه بالكامل)، ولا يمكن تنفيذ عمليات صرف جديدة لهذا الشهر.`,
+      };
+    }
     const rawClean = (inputCode || '').replace(/\s+/g, '').toLowerCase();
     const rawList = this.getStorage<MonthlyCode[]>(STORAGE_KEYS.MONTHLY_CODES, INITIAL_CODES);
     const codes = rawList.map((c) => {
@@ -1684,10 +1691,9 @@ class DataService {
     beneficiaryId?: string;
     searchQuery?: string;
   }): DeliveryRecord[] {
-    let list = this.getStorage<DeliveryRecord[]>(STORAGE_KEYS.DELIVERIES, INITIAL_DELIVERIES);
-    if (!list || list.length === 0) {
-      list = INITIAL_DELIVERIES;
-      this.setStorage(STORAGE_KEYS.DELIVERIES, list);
+    let list = this.getStorage<DeliveryRecord[]>(STORAGE_KEYS.DELIVERIES, []);
+    if (!Array.isArray(list)) {
+      list = [];
     }
     let updated = false;
     list = list.map((d) => {
@@ -1724,11 +1730,11 @@ class DataService {
   }
 
   getAuditLogs(): AuditLogEntry[] {
-    return this.getStorage<AuditLogEntry[]>(STORAGE_KEYS.AUDIT_LOGS, INITIAL_AUDIT_LOGS);
+    return this.getStorage<AuditLogEntry[]>(STORAGE_KEYS.AUDIT_LOGS, []);
   }
 
   private recordAuditLog(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): void {
-    const list = this.getStorage<AuditLogEntry[]>(STORAGE_KEYS.AUDIT_LOGS, INITIAL_AUDIT_LOGS);
+    const list = this.getStorage<AuditLogEntry[]>(STORAGE_KEYS.AUDIT_LOGS, []);
     const logItem: AuditLogEntry = {
       ...entry,
       id: 'log_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
@@ -1742,8 +1748,7 @@ class DataService {
   getDashboardMetrics(): DashboardMetrics {
     try {
       const beneficiaries = this.getBeneficiaries() || [];
-      const now = new Date();
-      const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const currentMonthKey = this.getActiveMonth();
       const codes = this.getMonthlyCodes(currentMonthKey) || [];
       const deliveries = this.getDeliveries() || [];
 
@@ -1762,12 +1767,22 @@ class DataService {
         0
       );
 
-      // Group deliveries into 4 recent weeks safely
+      // Group deliveries into 4 recent weeks using real data only
+      const weekCounts = [0, 0, 0, 0];
+      const weekPoints = [0, 0, 0, 0];
+      currentMonthDeliveries.forEach((d) => {
+        if (!d || !d.createdAt) return;
+        const day = new Date(d.createdAt).getDate();
+        const weekIndex = Math.min(3, Math.floor((day - 1) / 7));
+        weekCounts[weekIndex] += 1;
+        weekPoints[weekIndex] += d.totalPoints || 0;
+      });
+
       const weeklyDeliveries = [
-        { weekLabel: 'الأسبوع 1', deliveryCount: Math.max(1, Math.floor(currentMonthDeliveries.length * 0.2)), pointsCount: 180 },
-        { weekLabel: 'الأسبوع 2', deliveryCount: Math.max(2, Math.floor(currentMonthDeliveries.length * 0.3)), pointsCount: 340 },
-        { weekLabel: 'الأسبوع 3', deliveryCount: Math.max(3, Math.floor(currentMonthDeliveries.length * 0.35)), pointsCount: 420 },
-        { weekLabel: 'الأسبوع الحالي', deliveryCount: currentMonthDeliveries.length || 2, pointsCount: pointsDistributedThisMonth || 215 },
+        { weekLabel: 'الأسبوع 1', deliveryCount: weekCounts[0], pointsCount: weekPoints[0] },
+        { weekLabel: 'الأسبوع 2', deliveryCount: weekCounts[1], pointsCount: weekPoints[1] },
+        { weekLabel: 'الأسبوع 3', deliveryCount: weekCounts[2], pointsCount: weekPoints[2] },
+        { weekLabel: 'الأسبوع الحالي', deliveryCount: weekCounts[3], pointsCount: weekPoints[3] },
       ];
 
       return {
@@ -1783,18 +1798,18 @@ class DataService {
     } catch (e) {
       console.error('Error computing dashboard metrics safely:', e);
       return {
-        totalBeneficiaries: 5,
-        deliveriesThisMonth: 2,
-        totalPointsRemaining: 497,
-        codesThisMonthTotal: 5,
-        codesThisMonthUsed: 2,
-        codesThisMonthAvailable: 3,
-        pointsDistributedThisMonth: 228,
+        totalBeneficiaries: 0,
+        deliveriesThisMonth: 0,
+        totalPointsRemaining: 0,
+        codesThisMonthTotal: 0,
+        codesThisMonthUsed: 0,
+        codesThisMonthAvailable: 0,
+        pointsDistributedThisMonth: 0,
         weeklyDeliveries: [
-          { weekLabel: 'الأسبوع 1', deliveryCount: 1, pointsCount: 180 },
-          { weekLabel: 'الأسبوع 2', deliveryCount: 2, pointsCount: 340 },
-          { weekLabel: 'الأسبوع 3', deliveryCount: 3, pointsCount: 420 },
-          { weekLabel: 'الأسبوع الحالي', deliveryCount: 2, pointsCount: 228 },
+          { weekLabel: 'الأسبوع 1', deliveryCount: 0, pointsCount: 0 },
+          { weekLabel: 'الأسبوع 2', deliveryCount: 0, pointsCount: 0 },
+          { weekLabel: 'الأسبوع 3', deliveryCount: 0, pointsCount: 0 },
+          { weekLabel: 'الأسبوع الحالي', deliveryCount: 0, pointsCount: 0 },
         ],
       };
     }

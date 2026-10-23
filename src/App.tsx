@@ -121,6 +121,8 @@ export default function App() {
           activeTab={activeTab}
           onSelectTab={setActiveTab}
           userRole={currentUser.role}
+          currentUser={currentUser}
+          onLogout={handleLogout}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           isMobileDrawerOpen={isMobileDrawerOpen}

@@ -105,6 +105,17 @@ export interface DeliveryRecord {
   createdAt: string;
 }
 
+export type MonthStatus = 'open' | 'closed';
+
+export interface DistributionMonthInfo {
+  monthKey: string; // e.g. "2026-10"
+  status: MonthStatus; // 'open' | 'closed'
+  openedAt: string;
+  closedAt?: string;
+  closedByStaffName?: string;
+  notes?: string;
+}
+
 export type AuditActionType =
   | 'NATIONAL_ID_REVEAL'
   | 'GENERATE_CODES'
@@ -123,7 +134,11 @@ export type AuditActionType =
   | 'STAFF_LOGIN'
   | 'STAFF_LOGOUT'
   | 'PRODUCT_LIMIT_SAVE'
-  | 'PRODUCT_LIMIT_DELETE';
+  | 'PRODUCT_LIMIT_DELETE'
+  | 'MONTH_CLOSE'
+  | 'MONTH_OPEN'
+  | 'MONTH_CREATE'
+  | 'ACTIVE_MONTH_SET';
 
 export interface AuditLogEntry {
   id: string;

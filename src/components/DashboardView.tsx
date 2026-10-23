@@ -8,12 +8,14 @@ import {
   TrendingUp,
   Clock,
   CheckCircle2,
-  MapPin,
   PackageCheck,
+  Lock,
 } from 'lucide-react';
 import { DashboardMetrics, DeliveryRecord } from '../types/index.ts';
+import { dataService } from '../services/dataService.ts';
 import { ActiveTab } from './Sidebar.tsx';
 import { formatArabicCurrencyOrPoints } from '../utils/egyptianValidation.ts';
+import { formatMonthArabic } from '../utils/deliveryRules.ts';
 
 interface DashboardViewProps {
   metrics: DashboardMetrics;
@@ -26,6 +28,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   recentDeliveries = [],
   onNavigate,
 }) => {
+  const activeMonth = dataService.getActiveMonth();
+  const isMonthClosed = dataService.isMonthClosed(activeMonth);
+  const activeMonthArabic = formatMonthArabic(activeMonth);
+
   const weeklyDeliveries = Array.isArray(metrics?.weeklyDeliveries) ? metrics.weeklyDeliveries : [];
   const maxWeeklyCount = Math.max(
     ...weeklyDeliveries.map((w) => w?.deliveryCount || 0),
@@ -86,7 +92,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Card 3: Codes Used vs Available */}
         <div className="rounded-2xl bg-[#161D1A] border border-[#26312C] p-5 shadow-sm hover:border-[#E0B35A]/40 transition">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#8A9690]">الأكواد الشهرية (أكتوبر)</span>
+            <span className="text-xs font-semibold text-[#8A9690]">الأكواد الشهرية ({activeMonthArabic})</span>
             <div className="w-9 h-9 rounded-xl bg-[#E0B35A]/15 text-[#E0B35A] flex items-center justify-center">
               <KeyRound className="w-5 h-5" />
             </div>
@@ -147,21 +153,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="flex items-center gap-2 min-w-0">
                 <PackageCheck className="w-5 h-5 text-[#34C38F] flex-shrink-0" />
                 <h2 className="text-sm sm:text-base font-bold text-[#E8EDEA] leading-snug truncate">
-                  مؤشرات التوزيع لشهر أكتوبر 2026
+                  مؤشرات التوزيع لشهر {activeMonthArabic}
                 </h2>
               </div>
-              <span className="whitespace-nowrap inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-semibold flex-shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#34C38F] animate-pulse"></span>
-                <span>نشط</span>
-              </span>
+              {isMonthClosed ? (
+                <span className="whitespace-nowrap inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-[#E0B35A]/15 text-[#E0B35A] border border-[#E0B35A]/30 font-semibold flex-shrink-0">
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>مغلق (تم تسليمه)</span>
+                </span>
+              ) : (
+                <span className="whitespace-nowrap inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-semibold flex-shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#34C38F] animate-pulse"></span>
+                  <span>مفتوحة</span>
+                </span>
+              )}
             </div>
 
             <p className="text-xs text-[#8A9690] leading-relaxed mb-5">
-              متابعة حية لنسبة استلام الأسر المستحقة لحصصها الشهرية عبر مقر الجمعية الرئيسي بالقرية.
+              متابعة حية لنسبة استلام الأسر المستحقة لحصصها الشهرية.
             </p>
 
             {/* Completion Progress Bar */}
-            <div className="p-4 rounded-xl bg-[#1C2521] border border-[#26312C] space-y-3 mb-4">
+            <div className="p-4 rounded-xl bg-[#1C2521] border border-[#26312C] space-y-3">
               <div className="flex items-center justify-between text-xs font-semibold">
                 <span className="text-[#8A9690]">نسبة إنجاز الصرف بالقرية:</span>
                 <span className="text-sm font-bold text-[#34C38F]">{completionPercentage}%</span>
@@ -169,33 +182,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="w-full h-3 bg-[#0F1412] rounded-full overflow-hidden border border-[#26312C]">
                 <div
                   className="h-full bg-gradient-to-l from-[#34C38F] to-[#10B981] rounded-full transition-all duration-700"
-                  style={{ width: `${Math.max(completionPercentage, 8)}%` }}
+                  style={{ width: `${completionPercentage}%` }}
                 />
               </div>
               <div className="flex items-center justify-between text-[11px] text-[#8A9690]">
                 <span>تم صرف: {metrics.codesThisMonthUsed} أسرة</span>
                 <span>المتبقي: {metrics.codesThisMonthAvailable} أسرة</span>
               </div>
-            </div>
-
-            {/* Single Official Distribution Outlet */}
-            <div className="p-3.5 rounded-xl bg-[#1C2521] border border-[#26312C] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#34C38F]/15 text-[#34C38F] flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-5 h-5 text-[#34C38F]" />
-                </div>
-                <div>
-                  <div className="font-bold text-[#E8EDEA] text-xs">
-                    مقر الجمعية الرئيسي بالقرية
-                  </div>
-                  <div className="text-[11px] text-[#8A9690] mt-0.5">
-                    المنفذ الوحيد المعتمد لتسليم وصرف الحصص والسلع التموينية بقرية النسايمة
-                  </div>
-                </div>
-              </div>
-              <span className="self-start sm:self-center text-[10px] px-2.5 py-1 rounded-full bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-bold whitespace-nowrap">
-                منفذ الصرف الوحيد
-              </span>
             </div>
           </div>
 
@@ -222,7 +215,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <h2 className="text-sm font-bold text-[#E8EDEA]">معدل التسليم الأسبوعي</h2>
               </div>
               <span className="text-xs px-2 py-0.5 rounded-full bg-[#1C2521] border border-[#26312C] text-[#8A9690]">
-                أكتوبر 2026
+                {activeMonthArabic}
               </span>
             </div>
             <p className="text-xs text-[#8A9690] leading-relaxed mb-6">
@@ -245,7 +238,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <div className="w-full h-3 bg-[#1C2521] rounded-full overflow-hidden border border-[#26312C]">
                       <div
                         className="h-full bg-gradient-to-l from-[#34C38F] to-[#10B981] rounded-full transition-all duration-500"
-                        style={{ width: `${Math.max(percentage, 12)}%` }}
+                        style={{ width: `${week.deliveryCount > 0 ? Math.max(percentage, 5) : 0}%` }}
                       />
                     </div>
                   </div>
