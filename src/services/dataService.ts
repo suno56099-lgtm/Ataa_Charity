@@ -28,6 +28,9 @@ import {
 import {
   validateEgyptianNationalId,
   validateEgyptianPhone,
+  validatePersonName,
+  cleanPersonName,
+  extractEmbeddedDetails,
 } from '../utils/egyptianValidation.ts';
 
 const STORAGE_KEYS = {
@@ -50,7 +53,7 @@ const INITIAL_STAFF: StaffAccount[] = [
     id: 'a1111111-1111-1111-1111-111111111111',
     username: 'admin',
     email: 'admin@ataa.org.eg',
-    fullName: 'أ. مصطفى الشريف (المدير العام)',
+    fullName: 'مصطفى الشريف',
     role: 'admin',
     phone: '01012345678',
     nationalId: '28001011200159',
@@ -62,7 +65,7 @@ const INITIAL_STAFF: StaffAccount[] = [
     id: 'a2222222-2222-2222-2222-222222222222',
     username: 'tarek_staff',
     email: 'tarek@ataa.org.eg',
-    fullName: 'طارق حسام الدين (مسؤول الصرف)',
+    fullName: 'طارق حسام الدين',
     role: 'staff',
     phone: '01123456789',
     nationalId: '29005121400873',
@@ -74,7 +77,7 @@ const INITIAL_STAFF: StaffAccount[] = [
     id: 'a3333333-3333-3333-3333-333333333333',
     username: 'mona_staff',
     email: 'mona@ataa.org.eg',
-    fullName: 'منى عبد العزيز (مسؤولة التسجيل)',
+    fullName: 'منى عبد العزيز',
     role: 'staff',
     phone: '01234567890',
     nationalId: '29208241201984',
@@ -513,10 +516,18 @@ class DataService {
 
   // ================= Auth & Staff =================
   getCurrentUser(): StaffAccount | null {
-    return this.getStorage<StaffAccount | null>(STORAGE_KEYS.CURRENT_USER, INITIAL_STAFF[0]);
+    const user = this.getStorage<StaffAccount | null>(STORAGE_KEYS.CURRENT_USER, INITIAL_STAFF[0]);
+    if (!user) return null;
+    return {
+      ...user,
+      fullName: cleanPersonName(user.fullName),
+    };
   }
 
   setCurrentUser(user: StaffAccount | null): void {
+    if (user) {
+      user.fullName = cleanPersonName(user.fullName);
+    }
     this.setStorage(STORAGE_KEYS.CURRENT_USER, user);
   }
 
@@ -569,6 +580,7 @@ class DataService {
 
     // Update last login
     user.lastLoginAt = new Date().toISOString();
+    user.fullName = cleanPersonName(user.fullName);
     this.setStorage(STORAGE_KEYS.STAFF, staffList);
     this.setCurrentUser(user);
 
@@ -605,15 +617,19 @@ class DataService {
     let updated = false;
     const normalized = list.map((s) => {
       const seed = INITIAL_STAFF.find((init) => init.id === s.id || init.username === s.username);
-      if (seed && (!s.phone || !s.nationalId)) {
+      const extracted = extractEmbeddedDetails(s.fullName);
+      const cleaned = cleanPersonName(s.fullName);
+      const phone = s.phone || extracted.extractedPhone || seed?.phone;
+      const nationalId = s.nationalId || extracted.extractedNationalId || seed?.nationalId;
+      if (cleaned !== s.fullName || (phone && phone !== s.phone) || (nationalId && nationalId !== s.nationalId)) {
         updated = true;
-        return {
-          ...s,
-          phone: s.phone || seed.phone,
-          nationalId: s.nationalId || seed.nationalId,
-        };
       }
-      return s;
+      return {
+        ...s,
+        fullName: cleaned || (seed?.fullName ? cleanPersonName(seed.fullName) : s.fullName),
+        phone: phone,
+        nationalId: nationalId,
+      };
     });
     if (updated) {
       this.setStorage(STORAGE_KEYS.STAFF, normalized);
@@ -632,12 +648,17 @@ class DataService {
     const list = this.getStaffAccounts();
     const cleanUsername = data.username.trim().toLowerCase();
     const cleanEmail = data.email.trim().toLowerCase();
-    const cleanFullName = data.fullName.trim();
+    const cleanFullName = cleanPersonName(data.fullName.trim());
     const cleanPhone = (data.phone || '').trim();
     const cleanNationalId = (data.nationalId || '').trim();
 
     if (!cleanUsername || !cleanEmail || !cleanFullName) {
       return { success: false, error: 'يرجى إدخال كافة الحقول المطلوبة' };
+    }
+
+    const nameCheck = validatePersonName(data.fullName);
+    if (!nameCheck.isValid) {
+      return { success: false, error: nameCheck.errorMessage };
     }
 
     if (list.some((s) => s.username.toLowerCase() === cleanUsername)) {
@@ -742,7 +763,11 @@ class DataService {
 
     if (cleanFullName !== undefined) {
       if (!cleanFullName) return { success: false, error: 'الاسم الكامل مطلوب' };
-      staff.fullName = cleanFullName;
+      const nameCheck = validatePersonName(cleanFullName);
+      if (!nameCheck.isValid) {
+        return { success: false, error: nameCheck.errorMessage };
+      }
+      staff.fullName = cleanPersonName(cleanFullName);
     }
 
     if (data.role) {
@@ -852,9 +877,32 @@ class DataService {
   // ================= Beneficiaries =================
   getBeneficiaries(query?: string): Beneficiary[] {
     const list = this.getStorage<Beneficiary[]>(STORAGE_KEYS.BENEFICIARIES, INITIAL_BENEFICIARIES);
-    if (!query) return list;
+    let updated = false;
+    const cleanedList = list.map((b) => {
+      const extracted = extractEmbeddedDetails(b.fullName);
+      const cleaned = cleanPersonName(b.fullName);
+      const phone = b.phone || extracted.extractedPhone;
+      const nationalId = b.nationalId || extracted.extractedNationalId;
+      if (
+        cleaned !== b.fullName ||
+        (extracted.extractedPhone && !b.phone) ||
+        (extracted.extractedNationalId && !b.nationalId)
+      ) {
+        updated = true;
+      }
+      return {
+        ...b,
+        fullName: cleaned || b.fullName,
+        phone: phone || b.phone,
+        nationalId: nationalId || b.nationalId,
+      };
+    });
+    if (updated) {
+      this.setStorage(STORAGE_KEYS.BENEFICIARIES, cleanedList);
+    }
+    if (!query) return cleanedList;
     const q = query.trim().toLowerCase();
-    return list.filter(
+    return cleanedList.filter(
       (b) =>
         b.fullName.toLowerCase().includes(q) ||
         b.phone.includes(q) ||
@@ -863,6 +911,11 @@ class DataService {
   }
 
   addBeneficiary(data: Omit<Beneficiary, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>): { success: boolean; error?: string } {
+    const nameCheck = validatePersonName(data.fullName);
+    if (!nameCheck.isValid) {
+      return { success: false, error: nameCheck.errorMessage };
+    }
+
     const nCheck = validateEgyptianNationalId(data.nationalId);
     if (!nCheck.isValid) {
       return { success: false, error: nCheck.errorMessage };
@@ -886,6 +939,7 @@ class DataService {
     const newBen: Beneficiary = {
       ...data,
       id: 'ben_' + Date.now(),
+      fullName: cleanPersonName(data.fullName),
       nationalId: data.nationalId.trim(),
       phone: data.phone.trim(),
       familySize: cleanFamilySize,
@@ -917,6 +971,14 @@ class DataService {
     const list = this.getBeneficiaries();
     const index = list.findIndex((b) => b.id === id);
     if (index === -1) return { success: false, error: 'المستفيد غير موجود' };
+
+    if (updates.fullName !== undefined) {
+      const nameCheck = validatePersonName(updates.fullName);
+      if (!nameCheck.isValid) {
+        return { success: false, error: nameCheck.errorMessage };
+      }
+      updates.fullName = cleanPersonName(updates.fullName);
+    }
 
     if (updates.nationalId) {
       const nCheck = validateEgyptianNationalId(updates.nationalId);
@@ -1352,14 +1414,24 @@ class DataService {
   // ================= Monthly Codes =================
   getMonthlyCodes(monthKey: string): MonthlyCode[] {
     const rawList = this.getStorage<MonthlyCode[]>(STORAGE_KEYS.MONTHLY_CODES, INITIAL_CODES);
+    let updated = false;
     const list = rawList.map((c) => {
+      let codeVal = c.code;
       if (c.code && /^\d{6}$/.test(c.code)) {
         const [year, month] = (c.monthKey || '2026-10').split('-');
         const prefix = `ataa${(year || '2026').slice(-2)}${(month || '10').padStart(2, '0')}`;
-        return { ...c, code: `${prefix}${c.code}` };
+        codeVal = `${prefix}${c.code}`;
+        updated = true;
       }
-      return c;
+      const cleanName = cleanPersonName(c.beneficiaryName);
+      if (cleanName !== c.beneficiaryName) {
+        updated = true;
+      }
+      return { ...c, code: codeVal, beneficiaryName: cleanName || c.beneficiaryName };
     });
+    if (updated) {
+      this.setStorage(STORAGE_KEYS.MONTHLY_CODES, list);
+    }
     return list.filter((c) => c.monthKey === monthKey);
   }
 
@@ -1615,6 +1687,22 @@ class DataService {
     let list = this.getStorage<DeliveryRecord[]>(STORAGE_KEYS.DELIVERIES, INITIAL_DELIVERIES);
     if (!list || list.length === 0) {
       list = INITIAL_DELIVERIES;
+      this.setStorage(STORAGE_KEYS.DELIVERIES, list);
+    }
+    let updated = false;
+    list = list.map((d) => {
+      const cleanBen = cleanPersonName(d.beneficiaryName);
+      const cleanStaff = cleanPersonName(d.staffName);
+      if (cleanBen !== d.beneficiaryName || cleanStaff !== d.staffName) {
+        updated = true;
+      }
+      return {
+        ...d,
+        beneficiaryName: cleanBen || d.beneficiaryName,
+        staffName: cleanStaff || d.staffName,
+      };
+    });
+    if (updated) {
       this.setStorage(STORAGE_KEYS.DELIVERIES, list);
     }
     if (filters?.staffId) {

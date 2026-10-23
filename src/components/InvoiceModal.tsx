@@ -11,6 +11,7 @@ import {
 import { DeliveryRecord } from '../types/index.ts';
 import { dataService } from '../services/dataService.ts';
 import { toPng } from 'html-to-image';
+import { cleanPersonName } from '../utils/egyptianValidation.ts';
 
 interface InvoiceModalProps {
   delivery: DeliveryRecord | null;
@@ -44,10 +45,7 @@ export function formatWesternDateTime(dateInput: string | Date): string {
  */
 export function getCleanStaffName(rawName: string): string {
   if (!rawName) return '';
-  return rawName
-    .replace(/\s*\([^)]*\)/g, '')
-    .replace(/المدير العام|مدير النظام|مسؤول صرف|مسؤول الصرف/g, '')
-    .trim() || rawName;
+  return cleanPersonName(rawName);
 }
 
 /**
@@ -121,7 +119,7 @@ function generateInvoiceCanvasDataUrl(
 
   drawDetailRow('رقم الفاتورة:', invoiceNum);
   drawDetailRow('التاريخ والوقت:', formattedDate);
-  drawDetailRow('اسم المستفيد:', delivery.beneficiaryName, true);
+  drawDetailRow('اسم المستفيد:', cleanPersonName(delivery.beneficiaryName), true);
   drawDetailRow('رقم الهاتف:', delivery.beneficiaryPhone);
   drawDetailRow('كود الاستلام:', delivery.deliveryCode, true); // normal bold text
   drawDetailRow('مسؤول الصرف:', cleanStaff);
@@ -436,7 +434,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-1 sm:gap-2 py-0.5">
               <span className="text-gray-600 flex-shrink-0 text-[11px] sm:text-xs">اسم المستفيد:</span>
               <strong className="text-black font-bold text-[11px] sm:text-xs text-left break-words">
-                {delivery.beneficiaryName}
+                {cleanPersonName(delivery.beneficiaryName)}
               </strong>
             </div>
 

@@ -20,6 +20,8 @@ import {
   validateEgyptianNationalId,
   validateEgyptianPhone,
   maskNationalId,
+  validatePersonName,
+  cleanPersonName,
 } from '../utils/egyptianValidation.ts';
 import { calculateFamilyPoints } from '../utils/deliveryRules.ts';
 
@@ -151,8 +153,9 @@ export const BeneficiariesView: React.FC<BeneficiariesViewProps> = ({
       return;
     }
 
-    if (!formData.fullName.trim() || formData.fullName.trim().split(' ').length < 3) {
-      setFormError('يرجى إدخال الاسم الثلاثي أو الرباعي كاملاً للمستفيد');
+    const nameCheck = validatePersonName(formData.fullName);
+    if (!nameCheck.isValid) {
+      setFormError(nameCheck.errorMessage || 'يرجى إدخال اسم المستفيد الشخصي فقط دون أرقام هواتف أو أرقام قومية');
       return;
     }
 
@@ -162,6 +165,7 @@ export const BeneficiariesView: React.FC<BeneficiariesViewProps> = ({
 
     const submissionData = {
       ...formData,
+      fullName: cleanPersonName(formData.fullName),
       familySize: cleanFamilySize,
       pointsBalance: cleanPoints,
     };
@@ -289,7 +293,7 @@ export const BeneficiariesView: React.FC<BeneficiariesViewProps> = ({
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <h3 className="font-bold text-[#E8EDEA] text-sm sm:text-base">
-                          {ben.fullName}
+                          {cleanPersonName(ben.fullName)}
                         </h3>
                         {ben.notes && (
                           <p className="text-[11px] text-[#8A9690] mt-0.5 line-clamp-2">
@@ -386,15 +390,15 @@ export const BeneficiariesView: React.FC<BeneficiariesViewProps> = ({
 
             {/* Desktop & Tablet Table (>= 768px) */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-right text-xs min-w-[640px]">
+              <table className="w-full text-right text-xs min-w-[700px]">
                 <thead>
                   <tr className="border-b border-[#26312C] text-[#8A9690]">
-                    <th className="pb-3 pr-2">اسم المستفيد</th>
-                    <th className="pb-3">الرقم القومي (محمي)</th>
-                    <th className="pb-3">رقم المحمول</th>
-                    <th className="pb-3">أفراد الأسرة</th>
-                    <th className="pb-3">رصيد النقاط</th>
-                    <th className="pb-3 text-center pl-2">إجراءات</th>
+                    <th className="pb-3 pr-2 whitespace-nowrap font-semibold">اسم المستفيد</th>
+                    <th className="pb-3 whitespace-nowrap font-semibold">الرقم القومي (محمي)</th>
+                    <th className="pb-3 whitespace-nowrap font-semibold">رقم المحمول</th>
+                    <th className="pb-3 whitespace-nowrap font-semibold">أفراد الأسرة</th>
+                    <th className="pb-3 whitespace-nowrap font-semibold">رصيد النقاط</th>
+                    <th className="pb-3 text-center pl-2 whitespace-nowrap font-semibold">إجراءات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#26312C]">
@@ -403,26 +407,30 @@ export const BeneficiariesView: React.FC<BeneficiariesViewProps> = ({
                     const displayedNid = isUnmasked
                       ? unmaskedIds[ben.id]
                       : maskNationalId(ben.nationalId);
+                    const pureName = cleanPersonName(ben.fullName);
 
                     return (
                       <tr key={ben.id} className="hover:bg-[#1C2521] transition">
                         {/* Name & Note */}
-                        <td className="py-3 pr-2">
-                          <div className="font-semibold text-[#E8EDEA] text-sm">{ben.fullName}</div>
+                        <td className="py-3.5 pr-2">
+                          <div className="font-bold text-[#E8EDEA] text-sm tracking-wide">
+                            {pureName}
+                          </div>
                           {ben.notes && (
-                            <div className="text-[11px] text-[#8A9690] line-clamp-1">{ben.notes}</div>
+                            <div className="text-[11px] text-[#8A9690] line-clamp-1 mt-0.5">{ben.notes}</div>
                           )}
                         </td>
 
                         {/* National ID with Reveal / Mask button */}
-                        <td className="py-3">
+                        <td className="py-3.5 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <span
-                              className={`font-mono text-xs px-2 py-1 rounded-lg border ${
+                              className={`font-mono text-xs px-2.5 py-1 rounded-lg border tracking-wider select-all ${
                                 isUnmasked
                                   ? 'bg-[#34C38F]/15 border-[#34C38F]/40 text-[#34C38F] font-bold'
                                   : 'bg-[#1C2521] border-[#26312C] text-[#8A9690]'
                               }`}
+                              dir="ltr"
                             >
                               {displayedNid}
                             </span>
@@ -442,13 +450,14 @@ export const BeneficiariesView: React.FC<BeneficiariesViewProps> = ({
                         </td>
 
                         {/* Phone with Click to Call */}
-                        <td className="py-3 font-mono text-xs text-[#E8EDEA]">
+                        <td className="py-3.5 font-mono text-xs text-[#E8EDEA] whitespace-nowrap">
                           <a
                             href={`tel:${ben.phone}`}
-                            className="hover:text-[#34C38F] transition inline-flex items-center gap-1"
+                            className="hover:text-[#34C38F] transition inline-flex items-center gap-1.5 font-bold"
                             title="اتصال هاتفي"
+                            dir="ltr"
                           >
-                            <Phone className="w-3 h-3 text-[#8A9690]" />
+                            <Phone className="w-3.5 h-3.5 text-[#34C38F]" />
                             <span>{ben.phone}</span>
                           </a>
                         </td>
@@ -554,6 +563,9 @@ export const BeneficiariesView: React.FC<BeneficiariesViewProps> = ({
                   placeholder="مثال: أحمد عبد الرحمن محمود علي"
                   className="w-full bg-[#1C2521] border border-[#26312C] rounded-xl px-3.5 py-2.5 text-[#E8EDEA] focus:outline-none focus:border-[#34C38F]"
                 />
+                <span className="text-[10px] text-[#8A9690] mt-1 block">
+                  الاسم الشخصي فقط (ممنوع كتابة أرقام الهواتف أو الأرقام القومية في حقل الاسم)
+                </span>
               </div>
 
               {/* National ID & Phone */}
@@ -714,7 +726,7 @@ export const BeneficiariesView: React.FC<BeneficiariesViewProps> = ({
             <div className="mb-4 p-3 rounded-xl bg-[#1C2521] border border-[#26312C] text-xs space-y-1">
               <div className="text-[#8A9690]">المستفيد:</div>
               <div className="text-sm font-bold text-[#E8EDEA]">
-                {pointsModalBeneficiary.fullName}
+                {cleanPersonName(pointsModalBeneficiary.fullName)}
               </div>
               <div className="text-[#8A9690]">
                 الرصيد الحالي:{' '}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { HeartHandshake, LogOut, ShieldCheck, UserCheck, Clock } from 'lucide-react';
 import { StaffAccount } from '../types/index.ts';
+import { cleanPersonName } from '../utils/egyptianValidation.ts';
 import { PWAInstallButton } from './PWAInstallButton.tsx';
 
 interface HeaderProps {
@@ -62,8 +63,8 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </div>
               <div className="text-right hidden sm:block">
-                <div className="text-xs font-semibold text-[#E8EDEA] max-w-[120px] truncate">
-                  {currentUser.fullName}
+                <div className="text-xs font-semibold text-[#E8EDEA] max-w-[140px] truncate">
+                  {cleanPersonName(currentUser.fullName)}
                 </div>
                 <div className="text-[10px] text-[#8A9690]">
                   {currentUser.role === 'admin' ? 'مدير النظام' : 'مسؤول صرف'}

@@ -138,9 +138,85 @@ export function maskNationalId(nid: string): string {
 }
 
 /**
+ * Ensures that a person's name (Staff or Beneficiary) contains letters only
+ * and does NOT contain phone numbers, national IDs, or numeric sequences.
+ */
+export function validatePersonName(name: string): { isValid: boolean; errorMessage?: string } {
+  const trimmed = (name || '').trim();
+  if (!trimmed) {
+    return { isValid: false, errorMessage: 'الاسم مطلوب' };
+  }
+  // Convert Eastern Arabic digits to Western digits for detection
+  const normalized = trimmed.replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString());
+
+  // Check if name contains any phone number, national ID, or sequence of digits
+  if (
+    /\d{2,}/.test(normalized) ||
+    /01[0125]\d{8}/.test(normalized) ||
+    /[23]\d{13}/.test(normalized)
+  ) {
+    return {
+      isValid: false,
+      errorMessage: 'لا يمكن أن يحتوي حقل الاسم على أرقام هواتف أو أرقام قومية، يرجى كتابة الاسم بالأحرف فقط.',
+    };
+  }
+  return { isValid: true };
+}
+
+/**
+ * Strips any accidental numbers, phone numbers, national IDs, or stray symbols from a person's name.
+ * Handles both Western digits (0-9) and Arabic-Indic numerals (٠-٩).
+ */
+export function cleanPersonName(name: string | undefined | null): string {
+  if (!name) return '';
+
+  // 1. Convert Eastern Arabic numerals to standard digits
+  let cleaned = name.replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString());
+
+  // 2. Remove common prefixes before numbers e.g. "هاتف: ...", "قومي: ..."
+  cleaned = cleaned
+    .replace(/(?:هاتف|تليفون|محمول|موبايل|رقم|phone|tel|mobile)?\s*[:#-]?\s*01[0125]\d{8}/gi, ' ')
+    .replace(/(?:الرقم\s*القومي|رقم\s*قومي|قومي|بطاقة|national\s*id|nid)?\s*[:#-]?\s*[23]\d{13}/gi, ' ')
+    .replace(/\b[23]\d{13}\b/g, ' ')
+    .replace(/\b01[0125]\d{8}\b/g, ' ')
+    .replace(/\d+/g, ' ')
+    .replace(/\s*\(.*?\)\s*/g, ' ')
+    .replace(/\s*\[.*?\]\s*/g, ' ')
+    .replace(/^(أ\.|أستاذ|أستاذة|د\.|مهندس|الشيخ)\s+/g, ' ')
+    .replace(/[-–—/\\|•#~:;*+^=]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Strip non-letter punctuation at boundaries
+  cleaned = cleaned.replace(/^[^\p{L}\s]+|[^\p{L}\s]+$/gu, '').trim();
+
+  return cleaned;
+}
+
+/**
+ * Extracts phone or national ID embedded in a string if present.
+ */
+export function extractEmbeddedDetails(text: string | undefined | null): {
+  extractedPhone?: string;
+  extractedNationalId?: string;
+} {
+  if (!text) return {};
+  const normalized = text.replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString());
+
+  const nidMatch = normalized.match(/\b([23]\d{13})\b/);
+  const phoneMatch = normalized.match(/\b(01[0125]\d{8})\b/);
+
+  return {
+    extractedPhone: phoneMatch ? phoneMatch[1] : undefined,
+    extractedNationalId: nidMatch ? nidMatch[1] : undefined,
+  };
+}
+
+/**
  * Formats Western digits into clean Arabic number representation if needed,
  * while keeping codes and phones in legible 0-9 for easy copying.
  */
 export function formatArabicCurrencyOrPoints(amount: number): string {
   return new Intl.NumberFormat('ar-EG').format(amount);
 }
+

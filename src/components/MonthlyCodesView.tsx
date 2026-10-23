@@ -17,6 +17,7 @@ import {
 import { MonthlyCode } from '../types/index.ts';
 import { dataService } from '../services/dataService.ts';
 import { formatMonthArabic, buildSmsLink } from '../utils/deliveryRules.ts';
+import { cleanPersonName } from '../utils/egyptianValidation.ts';
 
 interface MonthlyCodesViewProps {
   onRefresh: () => void;
@@ -296,8 +297,13 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
                     {/* Header: Beneficiary Name, Phone & Status */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-bold text-sm text-[#E8EDEA] truncate">{c.beneficiaryName}</h3>
-                        <div className="font-mono text-xs text-[#8A9690] mt-0.5">{c.beneficiaryPhone}</div>
+                        <h3 className="font-bold text-sm text-[#E8EDEA] truncate">
+                          {cleanPersonName(c.beneficiaryName)}
+                        </h3>
+                        <div className="flex items-center gap-1.5 font-mono text-xs text-[#8A9690] mt-0.5">
+                          <span className="text-[10px] text-[#8A9690]/80">الهاتف:</span>
+                          <span dir="ltr">{c.beneficiaryPhone}</span>
+                        </div>
                       </div>
                       <div className="flex-shrink-0">
                         {isUsed ? (
@@ -380,15 +386,15 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
 
             {/* Desktop & Tablet Table (>= 768px) */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-right text-xs min-w-[640px]">
+              <table className="w-full text-right text-xs min-w-[700px]">
                 <thead>
                   <tr className="border-b border-[#26312C] text-[#8A9690]">
-                    <th className="pb-3 pr-2">اسم المستفيد</th>
-                    <th className="pb-3">رقم الهاتف المحمول</th>
-                    <th className="pb-3">كود الاستلام (6 أرقام)</th>
-                    <th className="pb-3">حالة الصرف</th>
-                    <th className="pb-3">تاريخ ووقت الصرف</th>
-                    <th className="pb-3 text-center pl-2">إجراءات الإرسال</th>
+                    <th className="pb-3 pr-2 whitespace-nowrap font-semibold">اسم المستفيد</th>
+                    <th className="pb-3 whitespace-nowrap font-semibold">رقم الهاتف المحمول</th>
+                    <th className="pb-3 whitespace-nowrap font-semibold">كود الاستلام (6 أرقام)</th>
+                    <th className="pb-3 whitespace-nowrap font-semibold">حالة الصرف</th>
+                    <th className="pb-3 whitespace-nowrap font-semibold">تاريخ ووقت الصرف</th>
+                    <th className="pb-3 text-center pl-2 whitespace-nowrap font-semibold">إجراءات الإرسال</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#26312C]">
@@ -400,12 +406,14 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
                     return (
                       <tr key={c.id} className="hover:bg-[#1C2521] transition">
                         {/* Beneficiary */}
-                        <td className="py-3 pr-2 font-semibold text-[#E8EDEA]">
-                          {c.beneficiaryName}
+                        <td className="py-3.5 pr-2 font-bold text-sm text-[#E8EDEA] tracking-wide">
+                          {cleanPersonName(c.beneficiaryName)}
                         </td>
 
                         {/* Phone */}
-                        <td className="py-3 font-mono text-xs text-[#8A9690]">{c.beneficiaryPhone}</td>
+                        <td className="py-3.5 font-mono text-xs text-[#E8EDEA] whitespace-nowrap font-medium" dir="ltr">
+                          {c.beneficiaryPhone}
+                        </td>
 
                         {/* 6-Digit Code */}
                         <td className="py-3">
@@ -417,7 +425,7 @@ export const MonthlyCodesView: React.FC<MonthlyCodesViewProps> = ({ onRefresh })
                               onClick={() => handleCopyCode(c.id, c.code)}
                               className="p-1 rounded hover:bg-[#26312C] text-[#8A9690] hover:text-[#E8EDEA] transition cursor-pointer"
                               title="نسخ الكود"
-                              aria-label={`نسخ كود ${c.beneficiaryName}`}
+                              aria-label={`نسخ كود ${cleanPersonName(c.beneficiaryName)}`}
                             >
                               {isCopied ? (
                                 <Check className="w-3.5 h-3.5 text-[#34C38F]" />

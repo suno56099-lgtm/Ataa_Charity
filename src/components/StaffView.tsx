@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { StaffAccount } from '../types/index.ts';
 import { dataService } from '../services/dataService.ts';
+import { cleanPersonName, validatePersonName } from '../utils/egyptianValidation.ts';
 
 interface StaffViewProps {
   staffList: StaffAccount[];
@@ -123,6 +124,12 @@ export const StaffView: React.FC<StaffViewProps> = ({
       return;
     }
 
+    const nameCheck = validatePersonName(formData.fullName);
+    if (!nameCheck.isValid) {
+      setFormError(nameCheck.errorMessage || 'لا يمكن أن يحتوي الاسم على أرقام هواتف أو أرقام قومية');
+      return;
+    }
+
     const res = dataService.createStaffAccount(formData);
     if (!res.success) {
       setFormError(res.error || 'فشل إنشاء الحساب');
@@ -141,6 +148,12 @@ export const StaffView: React.FC<StaffViewProps> = ({
     if (!editingStaff) return;
     setEditFormError(null);
     setEditFormSuccess(null);
+
+    const nameCheck = validatePersonName(editFormData.fullName);
+    if (!nameCheck.isValid) {
+      setEditFormError(nameCheck.errorMessage || 'لا يمكن أن يحتوي الاسم على أرقام هواتف أو أرقام قومية');
+      return;
+    }
 
     const res = dataService.updateStaffAccount(editingStaff.id, editFormData);
     if (!res.success) {
@@ -299,134 +312,184 @@ export const StaffView: React.FC<StaffViewProps> = ({
           <span className="text-xs text-[#8A9690]">{staffList.length} أعضاء</span>
         </div>
 
-        {/* Mobile View: High-Legibility Professional Cards (< 768px) */}
-        <div className="md:hidden space-y-3.5">
+        {/* Staff Members Grid: Beautiful, Responsive Cards for both Mobile and Desktop (Clean, Orderly, No Overlap) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
           {staffList.map((staff) => {
             const isCurrent = currentUser?.id === staff.id;
+            const pureName = cleanPersonName(staff.fullName) || staff.username;
+            const initialLetter = pureName.trim().charAt(0) || 'م';
+
             return (
               <div
                 key={staff.id}
-                className="p-3.5 sm:p-4 rounded-xl bg-[#1C2521] border border-[#26312C] space-y-3 shadow-sm text-xs"
+                className={`p-4 sm:p-5 rounded-2xl bg-[#1C2521] border transition-all shadow-sm text-xs flex flex-col justify-between hover:shadow-md ${
+                  isCurrent
+                    ? 'border-[#34C38F]/60 ring-2 ring-[#34C38F]/20 bg-gradient-to-b from-[#1C2521] to-[#161D1A]'
+                    : 'border-[#26312C] hover:border-[#34C38F]/40'
+                }`}
               >
-                {/* Header: Name + Role + Status */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-bold text-sm text-[#E8EDEA] flex items-center gap-1.5 flex-wrap">
-                      <span className="truncate">{staff.fullName}</span>
-                      {isCurrent && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#34C38F]/20 text-[#34C38F] font-bold">
-                          حسابك
+                <div className="space-y-4">
+                  {/* Top Header Row: Avatar + Full Name + Username + Role Badges */}
+                  <div className="flex items-start justify-between gap-3">
+                    {/* User Avatar & Name */}
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <div
+                        className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-base flex-shrink-0 shadow-sm ${
+                          staff.role === 'admin'
+                            ? 'bg-gradient-to-br from-[#E0B35A]/25 to-[#E0B35A]/10 text-[#E0B35A] border border-[#E0B35A]/40'
+                            : 'bg-gradient-to-br from-[#34C38F]/25 to-[#34C38F]/10 text-[#34C38F] border border-[#34C38F]/40'
+                        }`}
+                      >
+                        {initialLetter}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h3 className="font-bold text-base text-[#E8EDEA] tracking-wide break-words">
+                            {pureName}
+                          </h3>
+                          {isCurrent && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#34C38F]/20 text-[#34C38F] font-bold border border-[#34C38F]/30 whitespace-nowrap">
+                              أنت (الحساب الحالي)
+                            </span>
+                          )}
+                        </div>
+                        <div className="font-mono text-xs text-[#E0B35A] mt-0.5 flex items-center gap-1">
+                          <span>@{staff.username}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Role & Active Badges (Stacked Cleanly on Left in RTL) */}
+                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                      {staff.role === 'admin' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#E0B35A]/15 text-[#E0B35A] border border-[#E0B35A]/30 font-bold text-[11px] whitespace-nowrap">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>مدير عام</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-semibold text-[11px] whitespace-nowrap">
+                          <UserCheck className="w-3.5 h-3.5" />
+                          <span>مسؤول صرف</span>
                         </span>
                       )}
+
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-md border whitespace-nowrap ${
+                          staff.isActive
+                            ? 'text-[#34C38F] bg-[#34C38F]/10 border-[#34C38F]/25'
+                            : 'text-[#8A9690] bg-[#8A9690]/10 border-[#8A9690]/25'
+                        }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            staff.isActive ? 'bg-[#34C38F] animate-pulse' : 'bg-[#8A9690]'
+                          }`}
+                        />
+                        <span>{staff.isActive ? 'حساب نشط' : 'حساب معطل'}</span>
+                      </span>
                     </div>
-                    <div className="font-mono text-[11px] text-[#E0B35A] mt-0.5">@{staff.username}</div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {staff.role === 'admin' ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#E0B35A]/15 text-[#E0B35A] border border-[#E0B35A]/30 font-bold text-[10px]">
-                        <ShieldCheck className="w-3 h-3" />
-                        <span>مدير عام</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-semibold text-[10px]">
-                        <UserCheck className="w-3 h-3" />
-                        <span>مسؤول صرف</span>
-                      </span>
-                    )}
-
-                    <span
-                      className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                        staff.isActive ? 'text-[#34C38F] bg-[#34C38F]/10' : 'text-[#8A9690] bg-[#8A9690]/10'
-                      }`}
-                    >
-                      {staff.isActive ? 'نشط' : 'معطل'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Contact & Identification Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-[#26312C] text-[11px]">
-                  {/* Phone */}
-                  <div className="flex items-center justify-between bg-[#161D1A] p-2 rounded-lg border border-[#26312C]/60">
-                    <div className="flex items-center gap-1.5 text-[#8A9690]">
-                      <Phone className="w-3.5 h-3.5 text-[#34C38F]" />
-                      <span>الهاتف:</span>
-                    </div>
-                    {staff.phone ? (
-                      <div className="flex items-center gap-1">
-                        <a
-                          href={`tel:${staff.phone}`}
-                          className="font-mono font-bold text-[#E8EDEA] hover:text-[#34C38F] transition"
-                        >
-                          {staff.phone}
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(staff.phone || '', `phone-${staff.id}`)}
-                          className="p-1 text-[#8A9690] hover:text-[#E8EDEA]"
-                          title="نسخ رقم الهاتف"
-                        >
-                          {copiedId === `phone-${staff.id}` ? (
-                            <Check className="w-3 h-3 text-[#34C38F]" />
-                          ) : (
-                            <Copy className="w-3 h-3" />
-                          )}
-                        </button>
+                  {/* Contact & Identification: Clean, Spacious Full-Width Rows (Never Cramped or Overlapping) */}
+                  <div className="space-y-2 pt-3 border-t border-[#26312C]">
+                    {/* Row 1: Phone Number */}
+                    <div className="flex items-center justify-between gap-2 bg-[#161D1A] px-3.5 py-2.5 rounded-xl border border-[#26312C]">
+                      <div className="flex items-center gap-2 text-[#8A9690] flex-shrink-0">
+                        <div className="w-6 h-6 rounded-lg bg-[#34C38F]/10 flex items-center justify-center text-[#34C38F]">
+                          <Phone className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="text-xs font-medium text-[#8A9690]">رقم الهاتف:</span>
                       </div>
-                    ) : (
-                      <span className="text-[#8A9690] italic text-[10px]">غير مسجل</span>
-                    )}
-                  </div>
 
-                  {/* National ID */}
-                  <div className="flex items-center justify-between bg-[#161D1A] p-2 rounded-lg border border-[#26312C]/60">
-                    <div className="flex items-center gap-1.5 text-[#8A9690]">
-                      <CreditCard className="w-3.5 h-3.5 text-[#E0B35A]" />
-                      <span>الرقم القومي:</span>
+                      {staff.phone ? (
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <a
+                            href={`tel:${staff.phone}`}
+                            className="font-mono font-bold text-[#E8EDEA] hover:text-[#34C38F] transition text-xs sm:text-sm tracking-wide"
+                            dir="ltr"
+                          >
+                            {staff.phone}
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(staff.phone || '', `phone-${staff.id}`)}
+                            className="p-1 rounded-lg text-[#8A9690] hover:text-[#34C38F] hover:bg-[#1C2521] transition cursor-pointer flex-shrink-0"
+                            title="نسخ رقم الهاتف"
+                            aria-label="نسخ رقم الهاتف"
+                          >
+                            {copiedId === `phone-${staff.id}` ? (
+                              <Check className="w-3.5 h-3.5 text-[#34C38F]" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[#8A9690] italic text-xs">غير مسجل</span>
+                      )}
                     </div>
-                    {staff.nationalId ? (
-                      <div className="flex items-center gap-1">
-                        <span className="font-mono font-bold text-[#E8EDEA] tracking-wide">
-                          {staff.nationalId}
+
+                    {/* Row 2: National ID (14 digits) */}
+                    <div className="flex items-center justify-between gap-2 bg-[#161D1A] px-3.5 py-2.5 rounded-xl border border-[#26312C]">
+                      <div className="flex items-center gap-2 text-[#8A9690] flex-shrink-0">
+                        <div className="w-6 h-6 rounded-lg bg-[#E0B35A]/10 flex items-center justify-center text-[#E0B35A]">
+                          <CreditCard className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="text-xs font-medium text-[#8A9690]">الرقم القومي:</span>
+                      </div>
+
+                      {staff.nationalId ? (
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span
+                            className="font-mono font-bold text-[#E8EDEA] tracking-wider text-xs sm:text-sm select-all"
+                            dir="ltr"
+                          >
+                            {staff.nationalId}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(staff.nationalId || '', `nid-${staff.id}`)}
+                            className="p-1 rounded-lg text-[#8A9690] hover:text-[#E0B35A] hover:bg-[#1C2521] transition cursor-pointer flex-shrink-0"
+                            title="نسخ الرقم القومي"
+                            aria-label="نسخ الرقم القومي"
+                          >
+                            {copiedId === `nid-${staff.id}` ? (
+                              <Check className="w-3.5 h-3.5 text-[#34C38F]" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[#8A9690] italic text-xs">غير مسجل</span>
+                      )}
+                    </div>
+
+                    {/* Row 3: Email & Activity Info */}
+                    <div className="flex items-center justify-between gap-2 px-1 text-[11px] text-[#8A9690] pt-1">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1 truncate">
+                        <Mail className="w-3.5 h-3.5 text-[#8A9690] flex-shrink-0" />
+                        <span className="font-mono text-xs truncate text-[#8A9690] hover:text-[#E8EDEA] select-all">
+                          {staff.email}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(staff.nationalId || '', `nid-${staff.id}`)}
-                          className="p-1 text-[#8A9690] hover:text-[#E8EDEA]"
-                          title="نسخ الرقم القومي"
-                        >
-                          {copiedId === `nid-${staff.id}` ? (
-                            <Check className="w-3 h-3 text-[#34C38F]" />
-                          ) : (
-                            <Copy className="w-3 h-3" />
-                          )}
-                        </button>
                       </div>
-                    ) : (
-                      <span className="text-[#8A9690] italic text-[10px]">غير مسجل</span>
-                    )}
+
+                      <span className="text-[10px] text-[#8A9690] whitespace-nowrap flex-shrink-0">
+                        {staff.lastLoginAt
+                          ? `آخر دخول: ${new Intl.DateTimeFormat('ar-EG', { dateStyle: 'short' }).format(new Date(staff.lastLoginAt))}`
+                          : 'لم يسجل دخول بعد'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Email line */}
-                <div className="flex items-center justify-between text-[11px] text-[#8A9690] px-1">
-                  <div className="flex items-center gap-1.5 truncate">
-                    <Mail className="w-3.5 h-3.5 text-[#8A9690]" />
-                    <span className="font-mono truncate">{staff.email}</span>
-                  </div>
-                  <span className="text-[10px] text-[#8A9690] whitespace-nowrap">
-                    {staff.lastLoginAt
-                      ? `آخر دخول: ${new Intl.DateTimeFormat('ar-EG', { dateStyle: 'short' }).format(new Date(staff.lastLoginAt))}`
-                      : 'لم يسجل دخول'}
-                  </span>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#26312C] flex-wrap">
+                {/* Card Action Buttons (Bottom Bar) */}
+                <div className="flex items-center justify-end gap-2 pt-3.5 mt-3.5 border-t border-[#26312C] flex-wrap">
                   <button
                     onClick={() => handleOpenEditModal(staff)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#161D1A] hover:bg-[#26312C] border border-[#26312C] text-xs font-semibold text-[#34C38F] hover:border-[#34C38F]/40 transition cursor-pointer"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#161D1A] hover:bg-[#26312C] border border-[#26312C] text-xs font-semibold text-[#34C38F] hover:border-[#34C38F]/40 transition cursor-pointer active:scale-95"
+                    title="تعديل بيانات الموظف ورقم الهاتف والقومي"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                     <span>تعديل البيانات</span>
@@ -434,152 +497,31 @@ export const StaffView: React.FC<StaffViewProps> = ({
 
                   <button
                     onClick={() => handleResetPassword(staff)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#161D1A] hover:bg-[#26312C] border border-[#26312C] text-xs font-semibold text-[#E8EDEA] transition cursor-pointer"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#161D1A] hover:bg-[#26312C] border border-[#26312C] text-xs font-semibold text-[#E0B35A] hover:border-[#E0B35A]/40 transition cursor-pointer active:scale-95"
+                    title="إعادة تعيين كلمة المرور"
                   >
-                    <KeyRound className="w-3.5 h-3.5 text-[#E0B35A]" />
+                    <KeyRound className="w-3.5 h-3.5" />
                     <span>كلمة المرور</span>
                   </button>
 
                   {!isCurrent && (
                     <button
                       onClick={() => handleToggleActive(staff.id)}
-                      className={`p-1.5 rounded-xl border text-xs transition cursor-pointer ${
+                      className={`p-2 rounded-xl border text-xs transition cursor-pointer flex-shrink-0 active:scale-95 ${
                         staff.isActive
-                          ? 'bg-[#161D1A] border-[#F0707A]/30 text-[#F0707A] hover:bg-[#F0707A]/10'
+                          ? 'bg-[#161D1A] border-[#F0707A]/30 text-[#F0707A] hover:bg-[#F0707A]/15'
                           : 'bg-[#34C38F]/15 border-[#34C38F]/30 text-[#34C38F] hover:bg-[#34C38F]/25'
                       }`}
                       title={staff.isActive ? 'تعطيل الحساب' : 'تفعيل الحساب'}
+                      aria-label={staff.isActive ? `تعطيل حساب ${pureName}` : `تفعيل حساب ${pureName}`}
                     >
-                      <Power className="w-4 h-4" />
+                      <Power className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
               </div>
             );
           })}
-        </div>
-
-        {/* Desktop & Tablet Table (>= 768px) */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-right text-xs min-w-[760px]">
-            <thead>
-              <tr className="border-b border-[#26312C] text-[#8A9690]">
-                <th className="pb-3 pr-2">الموظف</th>
-                <th className="pb-3">رقم الهاتف</th>
-                <th className="pb-3">الرقم القومي</th>
-                <th className="pb-3">اسم المستخدم</th>
-                <th className="pb-3">البريد الإلكتروني</th>
-                <th className="pb-3">الدور والصلاحية</th>
-                <th className="pb-3">الحالة</th>
-                <th className="pb-3 text-center pl-2">إجراءات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#26312C]">
-              {staffList.map((staff) => {
-                const isCurrent = currentUser?.id === staff.id;
-                return (
-                  <tr key={staff.id} className="hover:bg-[#1C2521] transition">
-                    <td className="py-3.5 pr-2">
-                      <div className="font-semibold text-[#E8EDEA]">{staff.fullName}</div>
-                      {isCurrent && (
-                        <span className="text-[10px] text-[#34C38F] font-bold">
-                          (حسابك الحالي)
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3.5 font-mono text-xs">
-                      {staff.phone ? (
-                        <a
-                          href={`tel:${staff.phone}`}
-                          className="text-[#E8EDEA] hover:text-[#34C38F] font-bold transition flex items-center gap-1"
-                        >
-                          <Phone className="w-3 h-3 text-[#34C38F]" />
-                          <span>{staff.phone}</span>
-                        </a>
-                      ) : (
-                        <span className="text-[#8A9690] italic">—</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 font-mono text-xs">
-                      {staff.nationalId ? (
-                        <span className="text-[#E8EDEA] font-semibold tracking-wider">
-                          {staff.nationalId}
-                        </span>
-                      ) : (
-                        <span className="text-[#8A9690] italic">—</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 font-mono text-xs text-[#E0B35A]">@{staff.username}</td>
-                    <td className="py-3.5 font-mono text-xs text-[#8A9690]">{staff.email}</td>
-                    <td className="py-3.5">
-                      {staff.role === 'admin' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#E0B35A]/15 text-[#E0B35A] border border-[#E0B35A]/30 font-bold text-[11px]">
-                          <ShieldCheck className="w-3 h-3" />
-                          <span>مدير عام</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#34C38F]/15 text-[#34C38F] border border-[#34C38F]/30 font-semibold text-[11px]">
-                          <UserCheck className="w-3 h-3" />
-                          <span>مسؤول صرف</span>
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3.5">
-                      <span
-                        className={`inline-flex items-center gap-1.5 text-[11px] font-semibold ${
-                          staff.isActive ? 'text-[#34C38F]' : 'text-[#8A9690]'
-                        }`}
-                      >
-                        <span
-                          className={`w-2 h-2 rounded-full ${
-                            staff.isActive ? 'bg-[#34C38F]' : 'bg-[#8A9690]'
-                          }`}
-                        />
-                        <span>{staff.isActive ? 'نشط' : 'معطل'}</span>
-                      </span>
-                    </td>
-                    <td className="py-3.5 pl-2 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        {/* Edit Staff Info */}
-                        <button
-                          onClick={() => handleOpenEditModal(staff)}
-                          className="p-1.5 rounded-lg bg-[#1C2521] hover:bg-[#26312C] text-[#34C38F] transition cursor-pointer"
-                          title="تعديل بيانات الموظف ورقم الهاتف والقومي"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-
-                        {/* Reset Password */}
-                        <button
-                          onClick={() => handleResetPassword(staff)}
-                          className="p-1.5 rounded-lg bg-[#1C2521] hover:bg-[#26312C] text-[#E0B35A] transition cursor-pointer"
-                          title="إعادة تعيين كلمة المرور"
-                        >
-                          <KeyRound className="w-3.5 h-3.5" />
-                        </button>
-
-                        {/* Disable / Enable toggle */}
-                        {!isCurrent && (
-                          <button
-                            onClick={() => handleToggleActive(staff.id)}
-                            className={`p-1.5 rounded-lg transition cursor-pointer ${
-                              staff.isActive
-                                ? 'bg-[#1C2521] hover:bg-[#F0707A]/20 text-[#8A9690] hover:text-[#F0707A]'
-                                : 'bg-[#34C38F]/15 text-[#34C38F] hover:bg-[#34C38F]/25'
-                            }`}
-                            title={staff.isActive ? 'تعطيل الحساب' : 'تفعيل الحساب'}
-                            aria-label={staff.isActive ? `تعطيل حساب ${staff.fullName}` : `تفعيل حساب ${staff.fullName}`}
-                          >
-                            <Power className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
         </div>
       </div>
 
